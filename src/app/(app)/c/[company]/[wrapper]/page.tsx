@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { VersionedTransaction } from "@solana/web3.js";
 import { companyById, wrappersForCompany } from "@/lib/registry";
 import { fmtAge, fmtPct, fmtUnits, fmtUsd } from "@/lib/units";
@@ -156,6 +155,89 @@ export default function LabelPage({ params }: { params: Promise<{ company: strin
   const units = (raw: string | undefined) => (raw ? fmtUnits((Number(raw) / 10 ** w.decimals) * m) : "");
   const jupUrl = `https://jup.ag/swap/${side === "buy" ? `USDC-${w.mint}` : `${w.mint}-USDC`}`;
 
+  const dash = <span className="muted">-</span>;
+  const quoteAge = data ? Math.floor(Date.now() / 1000) - (data.buy?.quotedAt ?? data.generatedAt) : 0;
+  const left: { k: string; v: React.ReactNode }[] = [
+    {
+      k: "Reference",
+      v: data ? (
+        <>
+          {data.reference ? <>{fmtUsd(data.reference.price)} USD<span className="detail">{data.reference.source}, {fmtAge(data.reference.ageSec)}{data.reference.stale ? ", from cache" : ""}{data.reference.pythMark ? <span className="pyth-mark">PYTH</span> : null}</span></> : "no reference available"}
+          {data.pyth.index ? <span className="detail">Pyth index {fmtUsd(data.pyth.index.price)} USD, 24/7<span className="pyth-mark">PYTH</span></span> : null}
+          {data.pyth.wrapperFeed ? <span className="detail">Pyth wrapper feed {fmtUsd(data.pyth.wrapperFeed.price)} USD<span className="pyth-mark">PYTH</span></span> : null}
+          {data.pyth.redemptionRate ? <span className="detail">Redemption rate {data.pyth.redemptionRate.price.toFixed(6)} shares per raw token; mint multiplier {m.toFixed(6)}{Math.abs(data.pyth.redemptionRate.price - m) < 1e-5 ? ", agrees" : ", differs"}<span className="pyth-mark">PYTH</span></span> : null}
+        </>
+      ) : dash,
+    },
+    {
+      k: "Pool price",
+      v: data ? (
+        <>{data.row.unitPrice != null ? <>{fmtUsd(data.row.unitPrice)} USD per unit at {fmtUsd(data.size, 0)} USDC before the fee{m !== 1 ? <span className="detail">{fmtUsd(data.row.rawPrice ?? 0)} per raw token, multiplier {m.toFixed(7)}</span> : null}<span className="detail">route {data.row.routeLabels.join(" + ") || "none"}{data.row.deliveryRatio != null && data.row.deliveryRatio < 0.9995 ? `, delivers ${data.row.deliveryRatio.toFixed(4)}x the quote` : ""}</span></> : data.row.noLiquidity ? "no on-chain liquidity" : data.quoteError ? `no route simulated: ${data.quoteError}` : "thin at this size"}</>
+      ) : dash,
+    },
+    {
+      k: "Premium",
+      v: data ? (
+        <>{data.row.premium != null ? <>{fmtPct(data.row.premium)} at this size<span className="detail">{data.row.premiumUsd != null && data.row.premiumUsd > 0 ? `${fmtUsd(data.row.premiumUsd, 0)} USD of your ${fmtUsd(data.size, 0)} is above the reference; at the reference this position is worth ${fmtUsd(data.size - data.row.premiumUsd, 0)} USD.` : data.row.premiumUsd != null ? `The pool is under the reference by ${fmtUsd(-data.row.premiumUsd, 0)} USD at this size.` : ""}</span>{data.row.belowMark ? <span className="detail warn">Below mark: no enforceable redemption at the mark; the discount is not a payout.</span> : null}</> : "no reference"}</>
+      ) : dash,
+    },
+    {
+      k: "US market",
+      v: data ? (
+        <>{c.kind === "public" ? data.market?.text ?? "unknown" : "Not applicable, private company."}<span className="detail">The pool trades 24/7.</span></>
+      ) : dash,
+    },
+    {
+      k: "Impact",
+      v: data ? (
+        <>{data.row.impact != null ? `${(data.row.impact * 100).toFixed(2)}% at this size` : "n/a"}{data.pool ? <span className="detail">pool liquidity {fmtUsd(data.pool.liquidityUsd, 0)} USD, 24h volume {fmtUsd(data.pool.volume24hUsd, 0)} USD{data.row.thin ? ", thin" : ""}</span> : null}</>
+      ) : dash,
+    },
+    {
+      k: "Expected",
+      v: data ? (
+        <>{data.row.expectedUnits != null ? <>{fmtUnits(data.row.expectedUnits)} {w.symbol}<span className="detail">quote{data.buy?.simulatedOutRaw ? " checked by simulation" : ""}, {fmtAge(quoteAge)}</span></> : "n/a"}</>
+      ) : dash,
+    },
+    {
+      k: "Minimum",
+      v: data ? (
+        <>{data.row.minimumUnits != null ? <>{fmtUnits(data.row.minimumUnits)} {w.symbol}<span className="detail">{data.buy?.slippageBps ?? 0} bps slippage; the only figure the chain enforces</span></> : "n/a"}</>
+      ) : dash,
+    },
+  ];
+  const right: { k: string; v: React.ReactNode }[] = [
+    {
+      k: "Fees in",
+      v: data ? (
+        <>Parsec {data.feeBps / 100}% ({fmtUsd(data.size * data.feeBps / 10_000)} USDC){data.legal.transferFeeBps ? `. ${issuerName[w.issuer]} ${data.legal.transferFeeBps / 100}% withheld inside the pool leg, none to Parsec.` : `. ${issuerName[w.issuer]} 0%.`}<span className="detail">Network and rent under 0.002 SOL.</span></>
+      ) : dash,
+    },
+    {
+      k: "Fees out",
+      v: data ? (
+        <>If sold now: Parsec {data.feeBps / 100}%{data.legal.transferFeeBps ? `, ${issuerName[w.issuer]} ${data.legal.transferFeeBps / 100}%` : ""}{data.sell ? `, impact ${(data.sell.priceImpactPct * 100).toFixed(2)}%` : ""}.</>
+      ) : dash,
+    },
+    {
+      k: "Round trip",
+      v: data ? (
+        <>{data.row.roundTripUsdc != null && data.row.roundTripPct != null ? <>{fmtUsd(data.size, 0)} → about {fmtUsd(data.size + data.row.roundTripUsdc, 0)} USDC ({fmtPct(data.row.roundTripPct, 1)}) if sold straight back.</> : "n/a"}</>
+      ) : dash,
+    },
+    {
+      k: "Compare",
+      v: data ? (
+        <>{data.row.compare.jupOutUnits != null ? <>jup.ag would deliver {fmtUnits(data.row.compare.jupOutUnits)} {w.symbol} at {(data.row.compare.jupFeeBps ?? 10) / 100}%{data.row.compare.deltaUnits != null ? (Math.abs(data.row.compare.deltaUnits) < 1e-6 ? ": same amount." : `: ${data.row.compare.deltaUnits > 0 ? "more" : "less"} by ${fmtUnits(Math.abs(data.row.compare.deltaUnits))}.`) : "."}</> : "jup.ag comparison unavailable"}</>
+      ) : dash,
+    },
+    { k: "Routing", v: data ? "Metis (Jupiter Swap API)" : dash },
+    {
+      k: "Exit",
+      v: data ? <span className="small" style={{ fontFamily: "var(--sans)" }}>{data.legal.redemption}</span> : dash,
+    },
+  ];
+
   return (
     <main>
       <p className="small muted">
@@ -166,70 +248,40 @@ export default function LabelPage({ params }: { params: Promise<{ company: strin
       </h1>
       <p className="small">{data?.legal.line ?? ""}</p>
 
-      <div className="controls">
+      <div className="strip">
         <label className="small muted" htmlFor="size">Size, USDC</label>
         <input id="size" inputMode="decimal" value={sizeInput} onChange={(e) => setSizeInput(e.target.value)} onBlur={() => setSize(Math.max(1, Number(sizeInput) || 1000))} style={{ width: "9em" }} />
         <div className="seg" role="group" aria-label="Side">
           <button aria-pressed={side === "buy"} onClick={() => setSide("buy")}>Buy</button>
           <button aria-pressed={side === "sell"} onClick={() => setSide("sell")}>Sell</button>
         </div>
-        <WalletMultiButton />
       </div>
 
       {err ? <p className="warn">{err}</p> : null}
-      {!data ? <p className="muted">Quoting at size and simulating.</p> : null}
 
-      {data ? (
-        <dl className="label" aria-busy={loading}>
-          <dt>Reference</dt>
-          <dd>
-            {data.reference ? <>{fmtUsd(data.reference.price)} USD<span className="detail">{data.reference.source}, {fmtAge(data.reference.ageSec)}{data.reference.stale ? ", from cache" : ""}{data.reference.pythMark ? <span className="pyth-mark">PYTH</span> : null}</span></> : "no reference available"}
-            {data.pyth.index ? <span className="detail">Pyth index {fmtUsd(data.pyth.index.price)} USD, 24/7<span className="pyth-mark">PYTH</span></span> : null}
-            {data.pyth.wrapperFeed ? <span className="detail">Pyth wrapper feed {fmtUsd(data.pyth.wrapperFeed.price)} USD<span className="pyth-mark">PYTH</span></span> : null}
-            {data.pyth.redemptionRate ? <span className="detail">Redemption rate {data.pyth.redemptionRate.price.toFixed(6)} shares per raw token; mint multiplier {m.toFixed(6)}{Math.abs(data.pyth.redemptionRate.price - m) < 1e-5 ? ", agrees" : ", differs"}<span className="pyth-mark">PYTH</span></span> : null}
-          </dd>
-
-          <dt>Pool price</dt>
-          <dd>
-            {data.row.unitPrice != null ? <>{fmtUsd(data.row.unitPrice)} USD per unit at {fmtUsd(data.size, 0)} USDC before the fee{m !== 1 ? <span className="detail">{fmtUsd(data.row.rawPrice ?? 0)} per raw token, multiplier {m.toFixed(7)}</span> : null}<span className="detail">route {data.row.routeLabels.join(" + ") || "none"}{data.row.deliveryRatio != null && data.row.deliveryRatio < 0.9995 ? `, delivers ${data.row.deliveryRatio.toFixed(4)}x the quote` : ""}</span></> : data.row.noLiquidity ? "no on-chain liquidity" : data.quoteError ? `no route simulated: ${data.quoteError}` : "thin at this size"}
-          </dd>
-
-          <dt>Premium</dt>
-          <dd>
-            {data.row.premium != null ? <>{fmtPct(data.row.premium)} at this size<span className="detail">{data.row.premiumUsd != null && data.row.premiumUsd > 0 ? `${fmtUsd(data.row.premiumUsd, 0)} USD of your ${fmtUsd(data.size, 0)} is above the reference; at the reference this position is worth ${fmtUsd(data.size - data.row.premiumUsd, 0)} USD.` : data.row.premiumUsd != null ? `The pool is under the reference by ${fmtUsd(-data.row.premiumUsd, 0)} USD at this size.` : ""}</span>{data.row.belowMark ? <span className="detail warn">Below mark: no enforceable redemption at the mark; the discount is not a payout.</span> : null}</> : "no reference"}
-          </dd>
-
-          <dt>US market</dt>
-          <dd>{c.kind === "public" ? data.market?.text ?? "unknown" : "Not applicable, private company."}<span className="detail">The pool trades 24/7.</span></dd>
-
-          <dt>Impact</dt>
-          <dd>{data.row.impact != null ? `${(data.row.impact * 100).toFixed(2)}% at this size` : "n/a"}{data.pool ? <span className="detail">pool liquidity {fmtUsd(data.pool.liquidityUsd, 0)} USD, 24h volume {fmtUsd(data.pool.volume24hUsd, 0)} USD{data.row.thin ? ", thin" : ""}</span> : null}</dd>
-
-          <dt>Expected</dt>
-          <dd>{data.row.expectedUnits != null ? <>{fmtUnits(data.row.expectedUnits)} {w.symbol}<span className="detail">quote{data.buy?.simulatedOutRaw ? " checked by simulation" : ""}, {fmtAge(Math.floor(Date.now() / 1000) - (data.buy?.quotedAt ?? data.generatedAt))}</span></> : "n/a"}</dd>
-
-          <dt>Minimum</dt>
-          <dd>{data.row.minimumUnits != null ? <>{fmtUnits(data.row.minimumUnits)} {w.symbol}<span className="detail">{data.buy?.slippageBps ?? 0} bps slippage; the only figure the chain enforces</span></> : "n/a"}</dd>
-
-          <dt>Fees in</dt>
-          <dd>Par {data.feeBps / 100}% ({fmtUsd(data.size * data.feeBps / 10_000)} USDC){data.legal.transferFeeBps ? `. ${issuerName[w.issuer]} ${data.legal.transferFeeBps / 100}% withheld inside the pool leg, none to Par.` : `. ${issuerName[w.issuer]} 0%.`}<span className="detail">Network and rent under 0.002 SOL.</span></dd>
-
-          <dt>Fees out</dt>
-          <dd>If sold now: Par {data.feeBps / 100}%{data.legal.transferFeeBps ? `, ${issuerName[w.issuer]} ${data.legal.transferFeeBps / 100}%` : ""}{data.sell ? `, impact ${(data.sell.priceImpactPct * 100).toFixed(2)}%` : ""}.</dd>
-
-          <dt>Round trip</dt>
-          <dd>{data.row.roundTripUsdc != null && data.row.roundTripPct != null ? <>{fmtUsd(data.size, 0)} → about {fmtUsd(data.size + data.row.roundTripUsdc, 0)} USDC ({fmtPct(data.row.roundTripPct, 1)}) if sold straight back.</> : "n/a"}</dd>
-
-          <dt>Compare</dt>
-          <dd>{data.row.compare.jupOutUnits != null ? <>jup.ag would deliver {fmtUnits(data.row.compare.jupOutUnits)} {w.symbol} at {(data.row.compare.jupFeeBps ?? 10) / 100}%{data.row.compare.deltaUnits != null ? (Math.abs(data.row.compare.deltaUnits) < 1e-6 ? ": same amount." : `: ${data.row.compare.deltaUnits > 0 ? "more" : "less"} by ${fmtUnits(Math.abs(data.row.compare.deltaUnits))}.`) : "."}</> : "jup.ag comparison unavailable"}</dd>
-
-          <dt>Routing</dt>
-          <dd>Metis (Jupiter Swap API)</dd>
-
-          <dt>Exit</dt>
-          <dd className="small" style={{ fontFamily: "var(--sans)" }}>{data.legal.redemption}</dd>
-        </dl>
-      ) : null}
+      <div className="cols" aria-busy={loading}>
+        <table className="kv">
+          <tbody>
+            {left.map((r) => (
+              <tr key={r.k}>
+                <td className="k">{r.k}</td>
+                <td className="v">{r.v}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <table className="kv">
+          <tbody>
+            {right.map((r) => (
+              <tr key={r.k}>
+                <td className="k">{r.k}</td>
+                <td className="v">{r.v}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="small muted">{data ? `Reference ${data.reference ? fmtAge(data.reference.ageSec) : "n/a"}, quote ${fmtAge(quoteAge)}, simulated.` : " "}</p>
 
       <div className="controls">
         <button onClick={buildAndSign} disabled={!connected || !data || data.row.noLiquidity}>Build swap, sign in wallet</button>
@@ -244,14 +296,14 @@ export default function LabelPage({ params }: { params: Promise<{ company: strin
           <dd>
             <a href={`https://solscan.io/tx/${receipt.signature}`} target="_blank" rel="noreferrer">{receipt.signature.slice(0, 16)}…</a>
             <span className="detail">received {units(receipt.receivedRaw) || "pending"} · expected {units(receipt.expectedRaw)} · minimum {units(receipt.minimumRaw)}</span>
-            {receipt.feeRaw ? <span className="detail">Par fee {fmtUsd(Number(receipt.feeRaw) / 1e6)} USDC to <a href={`https://solscan.io/account/${receipt.feeAccount}`} target="_blank" rel="noreferrer">the fee account</a></span> : null}
+            {receipt.feeRaw ? <span className="detail">Parsec fee {fmtUsd(Number(receipt.feeRaw) / 1e6)} USDC to <a href={`https://solscan.io/account/${receipt.feeAccount}`} target="_blank" rel="noreferrer">the fee account</a></span> : null}
           </dd>
           {w.issuer === "tessera" && tessera && !tessera.registered && tessera.guard.ok ? (
             <>
               <dt>Referral</dt>
               <dd className="small" style={{ fontFamily: "var(--sans)" }}>
-                Register this wallet under Par&apos;s Tessera code {tessera.code}. Costs about {(tessera.rentLamports / 1e9).toFixed(4)} SOL in rent, gives you nothing, earns Par 30% of Tessera&apos;s 0.2% fee on your future sells. Optional.
-                <div style={{ marginTop: 8 }}><button className="secondary" onClick={registerTessera}>Register under Par&apos;s code</button></div>
+                Register this wallet under Parsec&apos;s Tessera code {tessera.code}. Costs about {(tessera.rentLamports / 1e9).toFixed(4)} SOL in rent, gives you nothing, earns Parsec 30% of Tessera&apos;s 0.2% fee on your future sells. Optional.
+                <div style={{ marginTop: 8 }}><button className="secondary" onClick={registerTessera}>Register under Parsec&apos;s code</button></div>
               </dd>
             </>
           ) : null}

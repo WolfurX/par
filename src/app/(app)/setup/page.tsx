@@ -17,7 +17,7 @@ function bytesToB64(bytes: Uint8Array): string {
   return btoa(s);
 }
 
-// Operator page: create Par's Tessera referral code from the fee wallet. One signature, once.
+// Operator page: create Parsec's Tessera referral code from the fee wallet. One signature, once.
 export default function SetupPage() {
   const { publicKey, signTransaction, connected } = useWallet();
   const [code, setCode] = useState("");
@@ -45,7 +45,7 @@ export default function SetupPage() {
   return (
     <main>
       <h1>Setup</h1>
-      <p className="muted">Operator page. Creates Par&apos;s Tessera referral code from the fee wallet; costs about 0.0023 SOL of rent. The connected wallet must be the fee wallet.</p>
+      <p className="muted">Operator page. Creates Parsec&apos;s Tessera referral code from the fee wallet; costs about 0.0023 SOL of rent. The connected wallet must be the fee wallet.</p>
       <div className="controls">
         <WalletMultiButton />
         <input aria-label="Referral code" placeholder="6 to 12 letters or digits" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} style={{ width: "14em" }} />

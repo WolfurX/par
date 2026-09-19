@@ -21,7 +21,7 @@ export default function FeesPage() {
   return (
     <main>
       <h1>Fee ledger</h1>
-      <p className="muted">Everything Par has collected, read from the chain. The swap fee lands in USDC; Tessera referral payouts arrive as T-Tokens from Tessera&apos;s fee manager in batches.</p>
+      <p className="muted">Everything Parsec has collected, read from the chain. The swap fee lands in USDC; Tessera referral payouts arrive as T-Tokens from Tessera&apos;s fee manager in batches.</p>
       {err ? <p className="warn">{err}</p> : null}
       {!data && !err ? <p className="muted">Reading the fee accounts.</p> : null}
       {data ? (

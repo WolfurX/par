@@ -1,4 +1,4 @@
-# Par (working name)
+# Parsec
 
 Tokenized-stock label for Solana wallets. Every on-chain way to own a company, public or pre-IPO, on one label: each issuer's own reference price, round-trip cost at the user's size with our fee printed, and what the token legally is, before the user signs in their own wallet. No AI. The user decides. Built for the Stocklana hackathon (submissions close 2026-09-25 20:00 UTC).
 

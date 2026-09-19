@@ -1,51 +1,56 @@
-"use client";
+import TickerField from "@/components/TickerField";
+import "./landing.css";
 
-import Link from "next/link";
-import { useMemo, useState } from "react";
-import { companies, wrappersForCompany } from "@/lib/registry";
+export default function LandingPage() {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "/companies";
 
-export default function Home() {
-  const [q, setQ] = useState("");
-  const list = useMemo(() => {
-    const s = q.trim().toLowerCase();
-    return companies.filter((c) => !s || c.name.toLowerCase().includes(s) || (c.ticker ?? "").toLowerCase().includes(s) || c.id.includes(s));
-  }, [q]);
   return (
-    <main>
-      <h1>Every on-chain way to own a company, on one label.</h1>
-      <p className="muted">
-        Each issuer&apos;s own reference price, the round-trip cost at your size with the fee printed, and what the token legally is,
-        before you sign in your own wallet.
-      </p>
-      <div className="controls">
-        <input aria-label="Search companies" placeholder="Search a company or ticker" value={q} onChange={(e) => setQ(e.target.value)} style={{ minWidth: "18em" }} />
+    <div className="landing">
+      <TickerField />
+      <div className="landing-shell">
+        <header className="landing-header">
+          <span className="landing-wordmark">Parsec</span>
+          <a className="landing-launch" href={appUrl}>Launch App</a>
+        </header>
+
+        <main>
+          <section className="landing-hero">
+            <div className="landing-wrap">
+              <div className="landing-hero-in">
+                <p className="landing-eyebrow">Parallax</p>
+                <h1>Every on-chain way to own a company, on one label.</h1>
+                <p className="landing-sub">Same stock, different prices. Compare them before you sign.</p>
+              </div>
+            </div>
+          </section>
+
+          <section className="landing-how">
+            <div className="landing-wrap">
+              <p className="landing-kicker">How it works</p>
+              <div className="landing-steps">
+                <div className="landing-step">Find every wrapper of a company.</div>
+                <div className="landing-step">Compare them at your size.</div>
+                <div className="landing-step">Sign in your own wallet.</div>
+              </div>
+            </div>
+          </section>
+
+          <section className="landing-issuers">
+            <div className="landing-wrap">
+              <p className="landing-kicker">Issuers</p>
+              <p>xStocks, Ondo, Backpack, Tessera, PreStocks.</p>
+            </div>
+          </section>
+        </main>
+
+        <footer className="landing-footer">
+          <div className="landing-wrap">
+            <p>Parsec is an information interface. It holds no funds and gives no advice.</p>
+            <p>Swaps are built through Jupiter and signed in your own wallet; Parsec takes a fixed 0.1% fee, printed on every label.</p>
+            <p className="landing-pow">Powered by Jupiter</p>
+          </div>
+        </footer>
       </div>
-      <table>
-        <thead>
-          <tr>
-            <th>Company</th>
-            <th>Kind</th>
-            <th>On-chain wrappers</th>
-          </tr>
-        </thead>
-        <tbody>
-          {list.map((c) => {
-            const ws = wrappersForCompany(c.id);
-            return (
-              <tr key={c.id}>
-                <td>
-                  <Link href={`/c/${c.id}`}>{c.name}</Link> {c.ticker ? <span className="mono muted small">{c.ticker}</span> : null}
-                </td>
-                <td className="muted">{c.kind === "public" ? "listed" : "private"}</td>
-                <td className="mono small">{ws.map((w) => w.symbol).join(" · ") || "none listed"}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-      <p className="small muted">
-        Twelve seed companies for now. The holdings view labels any wrapper mint it finds in a wallet, listed here or not.
-      </p>
-    </main>
+    </div>
   );
 }

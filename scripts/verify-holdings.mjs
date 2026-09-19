@@ -160,7 +160,7 @@ async function crossCheckOne(owner, mint) {
 }
 
 async function main() {
-  console.log("Par holdings verification -- run against live Helius mainnet RPC\n");
+  console.log("Parsec holdings verification -- run against live Helius mainnet RPC\n");
 
   for (const owner of ["D8J5wMyQSfnPohtMdYSz7VEYsH8Uk4DXY5Me8jVc1BsW", "2sujbbTjp2r5ugbjfHgUNDSwtdVfYpTiCSKPgT84CvD7"]) {
     console.log(`=== ${owner} ===`);

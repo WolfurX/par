@@ -1,4 +1,4 @@
-// Wallet holdings: every fungible Token/Token-2022 position Par recognizes, with live mint state.
+// Wallet holdings: every fungible Token/Token-2022 position Parsec recognizes, with live mint state.
 //
 // Helius DAS getAssetsByOwner is the wallet-discovery source (which mints, raw balance, decimals,
 // and the on-chain metadata used to label mints we do not list). It is NOT used for the Token-2022
@@ -245,7 +245,7 @@ async function resolveNextEvent(wrapper: Wrapper, state: MintState): Promise<Hol
 }
 
 /**
- * Every fungible Token/Token-2022 position a wallet holds that Par recognizes: registry wrappers by
+ * Every fungible Token/Token-2022 position a wallet holds that Parsec recognizes: registry wrappers by
  * mint, plus unlisted mints labeled by update authority, "Pre" prefix, or issuer metadata suffix.
  * Mints matching none of those are skipped.
  */

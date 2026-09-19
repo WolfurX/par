@@ -1,4 +1,4 @@
-# Par
+# Parsec
 
 Every on-chain way to own a company on Solana, public or pre-IPO, on one label: each issuer's own reference price, the round-trip cost at your size with the fee printed, and what the token legally is, before you sign in your own wallet. No AI. The user decides.
 
@@ -31,4 +31,4 @@ Jupiter Swap API (Metis routing; "Powered by Jupiter"), Pyth price feeds (Core o
 
 ## Not advice
 
-Par is an information interface. It does not hold funds, execute trades, or give investment, legal or tax advice. Tokens shown are issued by third parties under their own terms; they are not shares. Issuers exclude US persons and other jurisdictions.
+Parsec is an information interface. It does not hold funds, execute trades, or give investment, legal or tax advice. Tokens shown are issued by third parties under their own terms; they are not shares. Issuers exclude US persons and other jurisdictions.

@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 // On-chain ledger of the fee account: USDC received, plus Tessera referral payouts (T-Tokens from the fee manager).
 const TESSERA_FEE_MANAGER = "FV7A7uLK5jznMSZTbQAWyUFNdM15m4RnbKePUz5rrCeE";
 const JUPITER_V6 = "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4";
-// The fee wallet had a life before Par; only count inflows from launch onwards.
+// The fee wallet had a life before Parsec; only count inflows from launch onwards.
 const LEDGER_SINCE = Number(process.env.LEDGER_SINCE ?? 1789776000); // 2026-09-19T00:00:00Z
 
 interface Entry { signature: string; time: number; kind: "fee" | "referral" | "other"; amount: number; symbol: string; from?: string }

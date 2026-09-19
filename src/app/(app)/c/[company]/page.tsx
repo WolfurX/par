@@ -65,6 +65,7 @@ export default function CompanyPage({ params }: { params: Promise<{ company: str
   const c = data.company;
   const refs = data.rows.filter((r) => r.reference).map((r) => r.reference!);
   const uniqueRefs = Array.from(new Map(refs.map((r) => [r.source, r])).values());
+  const priced = data.rows.filter((r) => r.unitPrice != null);
 
   return (
     <main>
@@ -75,6 +76,15 @@ export default function CompanyPage({ params }: { params: Promise<{ company: str
         {c.kind === "public" ? "Listed company." : "Private company. Each issuer publishes its own mark; there is no exchange price."}{" "}
         {data.market ? <span>US market: {data.market.text}.</span> : null}
       </p>
+      {priced.length >= 2 ? (
+        <p>
+          <b className="mono">
+            {fmtUsd(Math.min(...priced.map((r) => r.unitPrice!)))} to {fmtUsd(Math.max(...priced.map((r) => r.unitPrice!)))} USD across{" "}
+            {new Set(priced.map((r) => r.issuer)).size} issuers.
+          </b>{" "}
+          <span className="muted">Compare {data.rows.length} wrappers below.</span>
+        </p>
+      ) : null}
       <dl className="label">
         {uniqueRefs.map((r) => (
           <Fragment key={r.source}>
@@ -131,6 +141,12 @@ export default function CompanyPage({ params }: { params: Promise<{ company: str
                 <div className="small warn">Below mark: no enforceable redemption at the mark; the discount is not a payout.</div>
               ) : null}
               <div className="own">{r.own}</div>
+            </div>
+            <div className="act">
+              <div>
+                <Link href={`/c/${c.id}/${encodeURIComponent(r.symbol)}`}>Compare</Link>
+              </div>
+              {r.reference ? <div className="muted small">{fmtAge(r.reference.ageSec)}</div> : null}
             </div>
           </div>
         ))}

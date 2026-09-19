@@ -4,7 +4,7 @@ import { intentNotes } from "@/lib/ranking";
 const FEE_BPS = Number(process.env.FEE_BPS ?? 10);
 const FEE_WALLET = process.env.FEE_WALLET ?? "";
 
-export const metadata = { title: "Rules · Par" };
+export const metadata = { title: "Rules" };
 
 export default function RulesPage() {
   const issuers = Object.values(legalLines);
@@ -47,7 +47,7 @@ export default function RulesPage() {
 
       <h2>Fees and round trip</h2>
       <p>
-        Fees in: Par {FEE_BPS / 100}% on the USDC input, plus the issuer&apos;s transfer fee withheld on the pool-to-wallet transfer
+        Fees in: Parsec {FEE_BPS / 100}% on the USDC input, plus the issuer&apos;s transfer fee withheld on the pool-to-wallet transfer
         (Tessera 0.2%, PreStocks 0.5%, others 0). Fees out: the same on the way back. Network: 5,000 lamports per signature; a new
         Token-2022 token account costs 1,488,440 lamports of rent. Round trip quotes the buy, then a sell of exactly the expected amount, and
         prints absolute USDC and percent.
@@ -119,10 +119,10 @@ export default function RulesPage() {
 
       <h2>Referral disclosures</h2>
       <p>
-        Tessera: after a T-Token buy, a wallet with no existing registration can register under Par&apos;s referral code as a separate,
-        opt-in transaction. It costs the wallet about 0.0042 SOL of rent, gives the wallet nothing, and earns Par 30% of Tessera&apos;s 0.2%
+        Tessera: after a T-Token buy, a wallet with no existing registration can register under Parsec&apos;s referral code as a separate,
+        opt-in transaction. It costs the wallet about 0.0042 SOL of rent, gives the wallet nothing, and earns Parsec 30% of Tessera&apos;s 0.2%
         fee on that wallet&apos;s future sells and transfers, paid by Tessera in T-Tokens in batches. Wallets already registered elsewhere are
-        never re-bound. Backpack: the join link on Backpack rows earns Par 10% of a referred account&apos;s crypto trading fees; stock trades
+        never re-bound. Backpack: the join link on Backpack rows earns Parsec 10% of a referred account&apos;s crypto trading fees; stock trades
         there carry no commission, so it earns nothing on stock flow.
       </p>
     </main>
