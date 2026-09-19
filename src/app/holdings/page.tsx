@@ -79,7 +79,7 @@ export default function HoldingsPage() {
       <div className="controls">
         <WalletMultiButton />
         <span className="small muted">or</span>
-        <input aria-label="Wallet address" placeholder="Paste a Solana address" value={addr} onChange={(e) => setAddr(e.target.value)} style={{ minWidth: "26em" }} />
+        <input aria-label="Wallet address" placeholder="Paste a Solana address" value={addr} onChange={(e) => setAddr(e.target.value)} style={{ flex: "1 1 18em", minWidth: 0, maxWidth: "100%" }} />
         <button className="secondary" onClick={() => addr.trim() && setOwner(addr.trim())}>Read</button>
       </div>
       {owner ? <p className="small mono muted">{owner}</p> : null}

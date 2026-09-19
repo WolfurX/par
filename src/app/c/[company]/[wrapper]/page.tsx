@@ -84,7 +84,9 @@ export default function LabelPage({ params }: { params: Promise<{ company: strin
   useEffect(() => {
     load();
     if (timer.current) window.clearInterval(timer.current);
-    timer.current = window.setInterval(load, 20_000);
+    timer.current = window.setInterval(() => {
+      if (!document.hidden) load();
+    }, 30_000);
     return () => {
       if (timer.current) window.clearInterval(timer.current);
     };
