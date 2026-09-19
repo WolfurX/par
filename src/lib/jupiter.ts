@@ -25,10 +25,11 @@ const DELIVERY_FLOOR = 0.999; // a label delivering under this ratio of the quot
 const TAKER_TTL_MS = 60 * 60 * 1000;
 const MIN_TAKER_LAMPORTS = 10_000_000; // 0.01 SOL: fees plus a Token-2022 ATA rent in simulation
 // Request windows, enforced in acquireSlot. Keyless: live headers on 2026-09-16 showed 5 requests per ~10 s, 429 on
-// the 6th. Keyed: CLAUDE.md budgets 100 requests per 10 s org-wide; this module takes 80 of them and leaves the rest
-// to jupprice.ts (/price/v3, one cached call per company). Each server process paces itself; there is no cross-process gate.
+// the 6th. Keyed: the live gateway uses 10 s windows; a Free key measured 10 per window on 2026-09-19 (429 on the 11th),
+// a Developer key would be 100. JUPITER_WINDOW_CALLS sets this module's share (default 8, leaving 2 for jupprice.ts);
+// raise it to 80 on the Developer tier. Each server process paces itself; there is no cross-process gate.
 const KEYLESS_WINDOW = { ms: 11_000, calls: 5 };
-const KEYED_WINDOW = { ms: 10_000, calls: 80 };
+const KEYED_WINDOW = { ms: 10_000, calls: Math.max(1, Number(process.env.JUPITER_WINDOW_CALLS ?? 8) || 8) };
 const MAX_IN_FLIGHT = 4;
 const TAKER_MISS_TTL_MS = 5 * 60 * 1000; // after a failed taker search, do not repeat the discovery walk for 5 min
 const TAKER_POOL_WARN_BELOW = 3; // warn when fewer pinned USDC wallets than this are viable, before the pool is dry
