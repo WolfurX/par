@@ -7,6 +7,9 @@ export const dynamic = "force-dynamic";
 
 // On-chain ledger of the fee account: USDC received, plus Tessera referral payouts (T-Tokens from the fee manager).
 const TESSERA_FEE_MANAGER = "FV7A7uLK5jznMSZTbQAWyUFNdM15m4RnbKePUz5rrCeE";
+const JUPITER_V6 = "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4";
+// The fee wallet had a life before Par; only count inflows from launch onwards.
+const LEDGER_SINCE = Number(process.env.LEDGER_SINCE ?? 1789776000); // 2026-09-19T00:00:00Z
 
 interface Entry { signature: string; time: number; kind: "fee" | "referral" | "other"; amount: number; symbol: string; from?: string }
 
@@ -49,7 +52,11 @@ export async function GET() {
         const delta = (after - before) / 10 ** acc.decimals;
         if (delta <= 0) continue;
         const signer = keys[0]?.pubkey;
-        const kind: Entry["kind"] = acc.kind === "referral" ? (signer === TESSERA_FEE_MANAGER ? "referral" : "other") : "fee";
+        const viaJupiter = keys.some((k) => k.pubkey === JUPITER_V6);
+        const fromSelf = signer === owner.toBase58();
+        // A swap fee is USDC arriving through a Jupiter route signed by someone else; anything else is a plain transfer in.
+        const kind: Entry["kind"] = acc.kind === "referral" ? (signer === TESSERA_FEE_MANAGER ? "referral" : "other") : viaJupiter && !fromSelf ? "fee" : "other";
+        if ((s.blockTime ?? 0) < LEDGER_SINCE) continue;
         entries.push({ signature: s.signature, time: s.blockTime ?? 0, kind, amount: delta, symbol: acc.symbol, from: signer });
       } catch {
         // skip unreadable transactions
@@ -58,7 +65,7 @@ export async function GET() {
   }
   entries.sort((a, b) => b.time - a.time);
   const totals: Record<string, number> = {};
-  for (const e of entries) totals[e.symbol] = (totals[e.symbol] ?? 0) + e.amount;
+  for (const e of entries) if (e.kind !== "other") totals[e.symbol] = (totals[e.symbol] ?? 0) + e.amount;
   const value = { feeWallet: owner.toBase58(), usdcFeeAccount: usdcAta.toBase58(), tesseraAccounts: tAtas.map((t) => ({ symbol: t.w.symbol, ata: t.ata.toBase58() })), totals, entries, generatedAt: Math.floor(Date.now() / 1000) };
   cache = { at: Date.now(), value };
   return NextResponse.json(value);

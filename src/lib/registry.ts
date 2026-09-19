@@ -7,14 +7,18 @@ import type { Company, Wrapper } from "./types";
 export const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 
 export const PYTH_PUSH_ORACLE_PROGRAM = "pythWSnswVUd12oZpeFP8e9CVaEqJg25g1Vtc2biRsT";
-export const PYTH_CORE_SHARD = 1; // AAPL account D9uk39pqZMcnmtPP9WeC8cREUpKZmyXLga9mSQ79SphW = PDA([u16le(1), feedId]) verified 2026-09-19
+// PDA([u16le(1), feedId]) shard-1 accounts, verified with scripts/registry-fill.mjs 2026-09-19:
+// AAPL D9uk39pqZMcnmtPP9WeC8cREUpKZmyXLga9mSQ79SphW, TSLA FQB8c4zB8Emrp9W8bmyk6GanCLq4aRytHYPDAnaEpq9z,
+// NVDA 5VETJ8h3p4JrESYrzhjTDAWPEjDjfcnduqe9CjxgqBNd, SPY CRDaGwcVnKdRNRtx6fjHtvrBgKM5U55AhbqBWhtPMDA,
+// MU 4eMZuk9khRP5uMnk5f1i1uA8joNMcHtBwDGCstW65bai. SPCX has none on shards 0-20 (checked 2026-09-16).
+export const PYTH_CORE_SHARD = 1;
 
 export const companies: Company[] = [
   { id: "aapl", name: "Apple", ticker: "AAPL", kind: "public", pythEquityFeedId: "49f6b65cb1de6b10eaf75e7c03ca029c306d0357e91b5311b175084a5ad55688", pythEquityProId: 922 },
-  { id: "tsla", name: "Tesla", ticker: "TSLA", kind: "public", pythEquityProId: 1435 }, // TODO feed id from Hermes /v2/price_feeds?query=TSLA
-  { id: "nvda", name: "Nvidia", ticker: "NVDA", kind: "public", pythEquityProId: 1314 }, // TODO feed id
-  { id: "spy", name: "SPDR S&P 500 ETF", ticker: "SPY", kind: "public", pythEquityProId: 1398 }, // TODO feed id
-  { id: "mu", name: "Micron", ticker: "MU", kind: "public" }, // TODO feed id and Pro id
+  { id: "tsla", name: "Tesla", ticker: "TSLA", kind: "public", pythEquityFeedId: "16dad506d7db8da01c87581c87ca897a012a153557d4d578c3b9c9e1bc0632f1", pythEquityProId: 1435 },
+  { id: "nvda", name: "Nvidia", ticker: "NVDA", kind: "public", pythEquityFeedId: "b1073854ed24cbc755dc527418f52b7d271f6cc967bbf8d8129112b18860a593", pythEquityProId: 1314 },
+  { id: "spy", name: "SPDR S&P 500 ETF", ticker: "SPY", kind: "public", pythEquityFeedId: "19e09bb805456ada3979a7d1cbb4b6d63babc3a0f8e8a9509f68afa5c4c11cd5", pythEquityProId: 1398 },
+  { id: "mu", name: "Micron", ticker: "MU", kind: "public", pythEquityFeedId: "152244dc24665ca7dd3f257b8f442dc449b6346f48235b7b229268cb770dda2d", pythEquityProId: 1298 },
   { id: "spcx", name: "SpaceX", ticker: "SPCX", kind: "public", pythEquityProId: 3314 }, // listed June 2026; no Core account on shards 0 to 20 (checked 2026-09-16)
   { id: "openai", name: "OpenAI", kind: "private", pythIndexProId: 3619 },
   { id: "kalshi", name: "Kalshi", kind: "private" },
@@ -28,24 +32,25 @@ export const companies: Company[] = [
 export const wrappers: Wrapper[] = [
   // xStocks (Backed): Token-2022, 8 decimals, no transfer fee, permanent delegate, pausable, scaled UI amount
   { mint: "XsbEhLAtcf6HdfpFZ5xEMdqW8nfAvcsP5bdudRLJzJp", issuer: "xstocks", symbol: "AAPLx", name: "Apple xStock", decimals: 8, companyId: "aapl", reference: { kind: "pyth-core", feedId: "49f6b65cb1de6b10eaf75e7c03ca029c306d0357e91b5311b175084a5ad55688" }, pythWrapperProId: 1792, pythRedemptionRateProId: 1791 },
-  { mint: "XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB", issuer: "xstocks", symbol: "TSLAx", name: "Tesla xStock", decimals: 8, companyId: "tsla", reference: { kind: "xstocks-price-data", symbol: "TSLAx" }, pythWrapperProId: 1847, pythRedemptionRateProId: 1846 }, // TODO switch to pyth-core once the feed id is filled
-  { mint: "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh", issuer: "xstocks", symbol: "NVDAx", name: "Nvidia xStock", decimals: 8, companyId: "nvda", reference: { kind: "xstocks-price-data", symbol: "NVDAx" }, pythWrapperProId: 1833, pythRedemptionRateProId: 1832 },
-  { mint: "XsoCS1TfEyfFhfvj8EtZ528L3CaKBDBRqRapnBbDF2W", issuer: "xstocks", symbol: "SPYx", name: "SP500 xStock", decimals: 8, companyId: "spy", reference: { kind: "xstocks-price-data", symbol: "SPYx" }, pythWrapperProId: 1843, pythRedemptionRateProId: 1842 },
-  // TODO MUx and SPCXx: mints from api.xstocks.fi/api/v2/public/assets/{symbol}, verify on-chain, then add
+  { mint: "XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB", issuer: "xstocks", symbol: "TSLAx", name: "Tesla xStock", decimals: 8, companyId: "tsla", reference: { kind: "pyth-core", feedId: "16dad506d7db8da01c87581c87ca897a012a153557d4d578c3b9c9e1bc0632f1" }, pythWrapperProId: 1847, pythRedemptionRateProId: 1846 },
+  { mint: "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh", issuer: "xstocks", symbol: "NVDAx", name: "Nvidia xStock", decimals: 8, companyId: "nvda", reference: { kind: "pyth-core", feedId: "b1073854ed24cbc755dc527418f52b7d271f6cc967bbf8d8129112b18860a593" }, pythWrapperProId: 1833, pythRedemptionRateProId: 1832 },
+  { mint: "XsoCS1TfEyfFhfvj8EtZ528L3CaKBDBRqRapnBbDF2W", issuer: "xstocks", symbol: "SPYx", name: "SP500 xStock", decimals: 8, companyId: "spy", reference: { kind: "pyth-core", feedId: "19e09bb805456ada3979a7d1cbb4b6d63babc3a0f8e8a9509f68afa5c4c11cd5" }, pythWrapperProId: 1843, pythRedemptionRateProId: 1842 },
+  { mint: "XsQLZycSZ7QnBBdBXQaTbQdiUcbRqjNJgyBGAMzhHav", issuer: "xstocks", symbol: "MUx", name: "Micron Technology xStock", decimals: 8, companyId: "mu", reference: { kind: "pyth-core", feedId: "152244dc24665ca7dd3f257b8f442dc449b6346f48235b7b229268cb770dda2d" } }, // mint from api.xstocks.fi, verified on-chain 2026-09-19
+  { mint: "Xs3oZwbHvqis4NYcf4YKWmEia2eC84wSiVrcYcTqpH8", issuer: "xstocks", symbol: "SPCXx", name: "SpaceX xStock", decimals: 8, companyId: "spcx", reference: { kind: "xstocks-price-data", symbol: "SPCXx" } }, // mint from api.xstocks.fi, verified on-chain 2026-09-19; no Pyth Core account for SPCX
 
   // Ondo: Token-2022, 9 decimals, no transfer fee, no permanent delegate, pausable, scaled UI amount. Near-zero Solana liquidity.
   { mint: "123mYEnRLM2LLYsJW3K6oyYh8uP1fngj732iG638ondo", issuer: "ondo", symbol: "AAPLon", name: "Apple (Ondo Tokenized)", decimals: 9, companyId: "aapl", reference: { kind: "pyth-core", feedId: "49f6b65cb1de6b10eaf75e7c03ca029c306d0357e91b5311b175084a5ad55688" }, pythWrapperProId: 3132 },
-  { mint: "KeGv7bsfR4MheC1CkmnAVceoApjrkvBhHYjWb67ondo", issuer: "ondo", symbol: "TSLAon", name: "Tesla (Ondo Tokenized)", decimals: 9, companyId: "tsla", reference: { kind: "xstocks-price-data", symbol: "TSLAx" }, pythWrapperProId: 3128 },
-  { mint: "gEGtLTPNQ7jcg25zTetkbmF7teoDLcrfTnQfmn2ondo", issuer: "ondo", symbol: "NVDAon", name: "Nvidia (Ondo Tokenized)", decimals: 9, companyId: "nvda", reference: { kind: "xstocks-price-data", symbol: "NVDAx" }, pythWrapperProId: 3127 },
-  { mint: "k18WJUULWheRkSpSquYGdNNmtuE2Vbw1hpuUi92ondo", issuer: "ondo", symbol: "SPYon", name: "SPDR S&P 500 ETF (Ondo Tokenized)", decimals: 9, companyId: "spy", reference: { kind: "xstocks-price-data", symbol: "SPYx" } },
+  { mint: "KeGv7bsfR4MheC1CkmnAVceoApjrkvBhHYjWb67ondo", issuer: "ondo", symbol: "TSLAon", name: "Tesla (Ondo Tokenized)", decimals: 9, companyId: "tsla", reference: { kind: "pyth-core", feedId: "16dad506d7db8da01c87581c87ca897a012a153557d4d578c3b9c9e1bc0632f1" }, pythWrapperProId: 3128 },
+  { mint: "gEGtLTPNQ7jcg25zTetkbmF7teoDLcrfTnQfmn2ondo", issuer: "ondo", symbol: "NVDAon", name: "Nvidia (Ondo Tokenized)", decimals: 9, companyId: "nvda", reference: { kind: "pyth-core", feedId: "b1073854ed24cbc755dc527418f52b7d271f6cc967bbf8d8129112b18860a593" }, pythWrapperProId: 3127 },
+  { mint: "k18WJUULWheRkSpSquYGdNNmtuE2Vbw1hpuUi92ondo", issuer: "ondo", symbol: "SPYon", name: "SPDR S&P 500 ETF (Ondo Tokenized)", decimals: 9, companyId: "spy", reference: { kind: "pyth-core", feedId: "19e09bb805456ada3979a7d1cbb4b6d63babc3a0f8e8a9509f68afa5c4c11cd5" } },
 
   // Backpack .US (Trek Nexus Markets Ltd, BVI): Token-2022, 6 decimals, no transfer fee, permanent delegate, pausable, scaled UI amount
   { mint: "SPCXxcqXj6e5dJDVNovHN8744zkbhM2bYudU45BimGb", issuer: "backpack", symbol: "SPCX.US", name: "SpaceX - Backpack Securities", decimals: 6, companyId: "spcx", reference: { kind: "backpack-external", symbol: "SPCX.US_USDC" }, pythWrapperProId: 3329, pythRedemptionRateProId: 3328 },
-  { mint: "MUxEsUKSMACyw5fZf68wxf5FLnZVhtU9CwH8uNNGay1", issuer: "backpack", symbol: "MU.US", name: "Micron Technology, Inc. - Backpack Securities", decimals: 6, companyId: "mu", reference: { kind: "backpack-external", symbol: "MU.US_USDC" } }, // TODO pyth-core once the MU feed id is filled
+  { mint: "MUxEsUKSMACyw5fZf68wxf5FLnZVhtU9CwH8uNNGay1", issuer: "backpack", symbol: "MU.US", name: "Micron Technology, Inc. - Backpack Securities", decimals: 6, companyId: "mu", reference: { kind: "pyth-core", feedId: "152244dc24665ca7dd3f257b8f442dc449b6346f48235b7b229268cb770dda2d" } },
   { mint: "AAPLEDt8RpzPgXyhvFzkMBofvFSQw9gpeMCoUdPdLnB8", issuer: "backpack", symbol: "AAPL.US", name: "Apple Inc. - Backpack Securities", decimals: 6, companyId: "aapl", reference: { kind: "pyth-core", feedId: "49f6b65cb1de6b10eaf75e7c03ca029c306d0357e91b5311b175084a5ad55688" } }, // deposit/withdraw disabled on Backpack; may have no pool
-  { mint: "TSLAqBbv4CNCnzWFeB7LmydAyEiNMJtve7DYKLpdK4S", issuer: "backpack", symbol: "TSLA.US", name: "Tesla, Inc. - Backpack Securities", decimals: 6, companyId: "tsla", reference: { kind: "backpack-external", symbol: "TSLA.US_USDC" } },
-  { mint: "NVDAVuiB7hwd3m5Wa1JuHNovPaPG6BH1QNztbKFxNjv", issuer: "backpack", symbol: "NVDA.US", name: "NVIDIA Corporation - Backpack Securities", decimals: 6, companyId: "nvda", reference: { kind: "backpack-external", symbol: "NVDA.US_USDC" } },
-  // TODO SPY.US mint from api.backpack.exchange/api/v1/assets (symbol "SPY.US"), verify on-chain
+  { mint: "TSLAqBbv4CNCnzWFeB7LmydAyEiNMJtve7DYKLpdK4S", issuer: "backpack", symbol: "TSLA.US", name: "Tesla, Inc. - Backpack Securities", decimals: 6, companyId: "tsla", reference: { kind: "pyth-core", feedId: "16dad506d7db8da01c87581c87ca897a012a153557d4d578c3b9c9e1bc0632f1" } },
+  { mint: "NVDAVuiB7hwd3m5Wa1JuHNovPaPG6BH1QNztbKFxNjv", issuer: "backpack", symbol: "NVDA.US", name: "NVIDIA Corporation - Backpack Securities", decimals: 6, companyId: "nvda", reference: { kind: "pyth-core", feedId: "b1073854ed24cbc755dc527418f52b7d271f6cc967bbf8d8129112b18860a593" } },
+  { mint: "SPYBo66VJPFjh1pXMb9Le53kDYWTK1zzYVDeVRWtsbi", issuer: "backpack", symbol: "SPY.US", name: "State Street SPDR S&P 500 ETF Trust - Backpack Securities", decimals: 6, companyId: "spy", reference: { kind: "pyth-core", feedId: "19e09bb805456ada3979a7d1cbb4b6d63babc3a0f8e8a9509f68afa5c4c11cd5" } }, // mint from api.backpack.exchange/api/v1/assets, verified on-chain 2026-09-19; deposit/withdraw disabled
 
   // Tessera T-Tokens: Token-2022, 9 decimals, 20 bps transfer fee, no hook, no delegate
   { mint: "oPAiAikWTaFj9RYoRFD35ccfwhnMcB3ThgBZRHSkjTZ", issuer: "tessera", symbol: "tOpenAI", name: "T-OpenAI", decimals: 9, companyId: "openai", reference: { kind: "tessera", code: "tOpenAI" } },

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { fmtUnits, fmtUsd } from "@/lib/units";
 
 interface Ledger {
@@ -32,10 +32,10 @@ export default function FeesPage() {
             <dt>USDC account</dt>
             <dd><a href={`https://solscan.io/account/${data.usdcFeeAccount}`} target="_blank" rel="noreferrer">{data.usdcFeeAccount}</a></dd>
             {data.tesseraAccounts.map((t) => (
-              <>
-                <dt key={t.ata + "t"}>{t.symbol}</dt>
-                <dd key={t.ata + "d"}><a href={`https://solscan.io/account/${t.ata}`} target="_blank" rel="noreferrer">{t.ata}</a></dd>
-              </>
+              <Fragment key={t.ata}>
+                <dt>{t.symbol}</dt>
+                <dd><a href={`https://solscan.io/account/${t.ata}`} target="_blank" rel="noreferrer">{t.ata}</a></dd>
+              </Fragment>
             ))}
             <dt>Totals</dt>
             <dd>{Object.keys(data.totals).length ? Object.entries(data.totals).map(([s, v]) => `${s === "USDC" ? fmtUsd(v) : fmtUnits(v, 6)} ${s}`).join(" · ") : "nothing collected yet"}</dd>

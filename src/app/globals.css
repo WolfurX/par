@@ -96,6 +96,18 @@ input, select { font: inherit; font-size: 14px; padding: 7px 9px; background: tr
 .seg button:last-child { border-right: 0; }
 .seg button[aria-pressed="true"] { background: var(--ink); color: var(--ground); }
 
+/* Wallet Standard connect button: match the page, not the adapter's purple default */
+.wallet-adapter-button, .wallet-adapter-button-trigger { font-family: var(--sans) !important; font-size: 14px !important; font-weight: 500 !important; height: auto !important; line-height: 1.2 !important; padding: 8px 14px !important; background: transparent !important; color: var(--ink) !important; border: 1px solid var(--rule-strong) !important; border-radius: 2px !important; }
+.wallet-adapter-button:hover, .wallet-adapter-button-trigger:hover { border-color: var(--ink) !important; background: transparent !important; }
+.wallet-adapter-button-start-icon { display: none !important; }
+.wallet-adapter-modal-wrapper { background: var(--ground) !important; color: var(--ink) !important; border: 1px solid var(--rule-strong) !important; border-radius: 2px !important; box-shadow: none !important; font-family: var(--sans) !important; }
+.wallet-adapter-modal-title { color: var(--ink) !important; font-weight: 600 !important; font-size: 18px !important; }
+.wallet-adapter-modal-list .wallet-adapter-button { border: 0 !important; border-bottom: 1px solid var(--rule) !important; border-radius: 0 !important; }
+.wallet-adapter-modal-button-close { background: transparent !important; }
+.wallet-adapter-dropdown-list { background: var(--ground) !important; border: 1px solid var(--rule-strong) !important; border-radius: 2px !important; box-shadow: none !important; }
+.wallet-adapter-dropdown-list-item { color: var(--ink) !important; font-family: var(--sans) !important; border-radius: 0 !important; }
+.wallet-adapter-dropdown-list-item:hover { background: var(--code-bg) !important; }
+
 footer.site-footer { margin-top: 56px; padding-top: 14px; border-top: 1px solid var(--rule); font-size: 12.5px; color: var(--muted); line-height: 1.5; }
 footer.site-footer p { margin: 0 0 8px; }
 

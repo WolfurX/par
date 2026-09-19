@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { use, useEffect, useState } from "react";
+import { Fragment, use, useEffect, useState } from "react";
 import { INTENTS, intentNotes, type Intent } from "@/lib/ranking";
 import { fmtAge, fmtPct, fmtUsd } from "@/lib/units";
 
@@ -77,12 +77,12 @@ export default function CompanyPage({ params }: { params: Promise<{ company: str
       </p>
       <dl className="label">
         {uniqueRefs.map((r) => (
-          <>
-            <dt key={r.source + "-t"}>Reference</dt>
-            <dd key={r.source + "-d"}>
+          <Fragment key={r.source}>
+            <dt>Reference</dt>
+            <dd>
               {fmtUsd(r.price)} USD <span className="detail">{r.source}, {fmtAge(r.ageSec)}{r.stale ? ", served from cache" : ""}{r.pythMark ? <span className="pyth-mark">PYTH</span> : null}</span>
             </dd>
-          </>
+          </Fragment>
         ))}
         {data.index ? (
           <>
