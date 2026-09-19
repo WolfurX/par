@@ -7,6 +7,7 @@
 import { NextResponse } from "next/server";
 import { PublicKey } from "@solana/web3.js";
 import { appCodeOwner, appReferralCode, buildRegistration, isRegistered, programGuard, registrationRent } from "@/lib/tessera";
+import { getConnection } from "@/lib/rpc";
 import { screenAddress } from "@/lib/screening";
 
 export const runtime = "nodejs";
@@ -59,6 +60,16 @@ export async function POST(request: Request) {
   const screen = await screenAddress(user.toBase58());
   if (screen.blocked) {
     return NextResponse.json({ error: "Registration is not available for this address.", reason: screen.reason, sources: screen.sources }, { status: 403 });
+  }
+
+  // The user pays the rent for two accounts plus the signature; an empty wallet fails the simulation with AccountNotFound.
+  const [rent, lamports] = await Promise.all([registrationRent(), getConnection().getBalance(user)]);
+  const needed = rent.lamports + 10_000;
+  if (lamports < needed) {
+    return NextResponse.json(
+      { error: `This wallet needs about ${(needed / 1e9).toFixed(4)} SOL for rent and the fee before it can register; it holds ${(lamports / 1e9).toFixed(4)} SOL.`, code: "insufficient_sol", haveLamports: lamports, needLamports: needed },
+      { status: 400 },
+    );
   }
 
   try {
