@@ -86,7 +86,7 @@ export interface PoolInfo {
   mint: string;
   liquidityUsd: number; // summed across pools
   volume24hUsd: number;
-  topPool?: { dexId: string; pairAddress: string; quoteSymbol: string; liquidityUsd: number };
+  topPool?: { dexId: string; pairAddress: string; quoteSymbol: string; liquidityUsd: number; priceUsdRaw: number }; // USD per raw token, as DexScreener reports it
   fetchedAt: number;
 }
 

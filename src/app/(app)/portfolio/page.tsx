@@ -20,7 +20,7 @@ interface SellPanel { unitPrice: number | null; premium: number | null; sellUsdc
 
 const issuerName: Record<string, string> = { xstocks: "xStocks (Backed)", ondo: "Ondo", backpack: "Backpack", tessera: "Tessera", prestocks: "PreStocks" };
 
-export default function HoldingsPage() {
+export default function PortfolioPage() {
   const { publicKey } = useWallet();
   const [addr, setAddr] = useState("");
   const [owner, setOwner] = useState<string | null>(null);
@@ -108,7 +108,7 @@ export default function HoldingsPage() {
                       <td className="v">
                         {!panel ? <button className="secondary" onClick={() => loadPanel(h)}>Quote this position</button> : panel === "loading" ? "quoting…" : (
                           <>
-                            {panel.sellUsdc != null ? `${fmtUsd(panel.sellUsdc)} USDC if sold now` : "no route at this size"}
+                            {panel.sellUsdc != null ? <><span className="amt">{fmtUsd(panel.sellUsdc)}</span> USDC if sold now</> : "no route at this size"}
                             {panel.reference ? <span className="detail">at the reference ({panel.reference.source}, {fmtAge(panel.reference.ageSec)}): {fmtUsd(h.balanceUnits * panel.reference.price)} USD{panel.premium != null ? `; pool ${fmtPct(panel.premium)} to reference` : ""}</span> : null}
                           </>
                         )}

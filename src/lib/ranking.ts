@@ -2,12 +2,12 @@
 import type { LegalLine, MintState, PoolInfo, QuoteResult, Reference, Wrapper } from "./types";
 import { rawToUnits, rawToUsdc } from "./units";
 
-export type Intent = "hold" | "trade" | "cheapest" | "redeemable";
-export const INTENTS: { id: Intent; label: string }[] = [
-  { id: "hold", label: "Hold" },
-  { id: "trade", label: "Trade now" },
-  { id: "cheapest", label: "Cheapest" },
-  { id: "redeemable", label: "Redeemable" },
+export type Intent = "price" | "liquidity" | "redeemable" | "terms";
+export const INTENTS: { id: Intent; label: string; line: string }[] = [
+  { id: "price", label: "Price", line: "Lowest premium to the issuer's reference at this size." },
+  { id: "liquidity", label: "Liquidity", line: "Least round trip cost at this size; thin pools last." },
+  { id: "redeemable", label: "Redeemable", line: "A redemption path exists, most ordinary first." },
+  { id: "terms", label: "Terms", line: "Fewest issuer powers and fees." },
 ];
 
 export interface RowInput {
@@ -150,7 +150,7 @@ export function rankRows(rows: RowComputed[], intent: Intent): { row: RowCompute
     const s = sinkNoLiquidity(a, b);
     if (s !== 0) return s;
     switch (intent) {
-      case "trade": {
+      case "liquidity": {
         const ta = a.thin ? 1 : 0;
         const tb = b.thin ? 1 : 0;
         if (ta !== tb) return ta - tb;
@@ -159,7 +159,7 @@ export function rankRows(rows: RowComputed[], intent: Intent): { row: RowCompute
         if (ra !== rb) return rb - ra; // least negative first
         return byLiquidityDesc(a, b);
       }
-      case "cheapest": {
+      case "price": {
         const ga = a.volume24hUsd < CHEAPEST_MIN_VOLUME || a.liquidityUsd < CHEAPEST_MIN_LIQUIDITY ? 1 : 0;
         const gb = b.volume24hUsd < CHEAPEST_MIN_VOLUME || b.liquidityUsd < CHEAPEST_MIN_LIQUIDITY ? 1 : 0;
         if (ga !== gb) return ga - gb;
@@ -168,7 +168,7 @@ export function rankRows(rows: RowComputed[], intent: Intent): { row: RowCompute
         if (pa !== pb) return pa - pb;
         return byLiquidityDesc(a, b);
       }
-      case "hold": {
+      case "terms": {
         if (a.legal.holdScore !== b.legal.holdScore) return b.legal.holdScore - a.legal.holdScore;
         return byLiquidityDesc(a, b);
       }
@@ -182,8 +182,8 @@ export function rankRows(rows: RowComputed[], intent: Intent): { row: RowCompute
 }
 
 export const intentNotes: Record<Intent, string> = {
-  hold: "Ordered by the published hold score: no transfer fee, no permanent delegate, public proof of reserves, ordinary-course retail redemption, no dated forfeiture window. Ties by liquidity.",
-  trade: "Ordered by round-trip cost at this size, least costly first. Rows with more than 5% price impact or no simulated route sink and are marked thin. The button is never disabled.",
-  cheapest: "Ordered by premium to the issuer's reference at this size. Rows with under 1,000 USD of daily volume or under 25,000 USD of liquidity sink. A pre-IPO token under its mark is not a payout: no redemption at the mark is enforceable.",
+  terms: "Ordered by the published hold score: no transfer fee, no permanent delegate, public proof of reserves, ordinary-course retail redemption, no dated forfeiture window. Ties by liquidity.",
+  liquidity: "Ordered by round-trip cost at this size, least costly first. Rows with more than 5% price impact or no simulated route sink and are marked thin. The button is never disabled.",
+  price: "Ordered by premium to the issuer's reference at this size. Rows with under 1,000 USD of daily volume or under 25,000 USD of liquidity sink. A pre-IPO token under its mark is not a payout: no redemption at the mark is enforceable.",
   redeemable: "Tier 1: redeem from your wallet after KYC. Tier 2: deposit to an exchange account. Tier 3: only after an issuer-announced event. Ties by liquidity.",
 };

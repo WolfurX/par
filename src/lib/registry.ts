@@ -74,7 +74,7 @@ export function wrappersForCompany(companyId: string): Wrapper[] {
   return wrappers.filter((w) => w.companyId === companyId);
 }
 
-/** Update authorities used to label wrapper mints we do not list (holdings view). */
+/** Update authorities used to label wrapper mints we do not list (portfolio view). */
 export const issuerUpdateAuthorities: Record<string, "xstocks" | "ondo"> = {
   "5aMNNLQJwAEeoemTEMkv5NVjqKwvvefRYCQ5Z67HFvEq": "xstocks",
   "9foMHsSDq7nMg4WPusSz9eY7tyxyukqborA8GyU5cUxD": "ondo",

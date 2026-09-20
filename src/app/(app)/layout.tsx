@@ -20,7 +20,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </Link>
           <nav aria-label="Sections">
             <Link href="/companies">Companies</Link>
-            <Link href="/holdings">Holdings</Link>
+            <Link href="/portfolio">Portfolio</Link>
           </nav>
           <WalletButton />
         </div>

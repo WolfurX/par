@@ -38,7 +38,7 @@ export default function Home() {
         })}
       </div>
       <p className="small muted">
-        {companies.length} companies listed today. The holdings view labels any wrapper mint it finds in a wallet, listed here or not.
+        {companies.length} companies listed today. The portfolio view labels any wrapper mint it finds in a wallet, listed here or not.
       </p>
     </main>
   );

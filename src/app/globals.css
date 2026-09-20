@@ -1,6 +1,7 @@
 :root {
   --ground: #f7f6f1;
   --ground2: #efede7;
+  --hover: #e8e5dc;
   --ink: #15181b;
   --muted: #6b7078;
   --rule: #d8d6cf;
@@ -38,7 +39,8 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; }
 .titlebar nav a { border: 0; color: var(--muted); display: inline-flex; align-items: center; min-height: 44px; }
 .titlebar nav a:hover { color: var(--accent); }
 @media (min-width: 641px) { .titlebar-in { height: 64px; } }
-h1 { font-size: 26px; font-weight: 600; line-height: 1.15; margin: 0 0 10px; letter-spacing: -0.01em; text-wrap: balance; }
+h1 { font-family: var(--font-archivo), var(--sans); font-size: 26px; font-weight: 700; line-height: 1.15; margin: 0 0 10px; letter-spacing: -0.01em; text-wrap: balance; }
+h1 .mono { font-weight: 500; }
 h2 { font-size: 18px; font-weight: 600; margin: 32px 0 10px; }
 h3 { font-size: 14px; font-weight: 600; margin: 22px 0 6px; letter-spacing: 0.01em; }
 p { margin: 0 0 12px; }
@@ -110,7 +112,7 @@ input, select { font: inherit; font-size: 14px; padding: 7px 9px; background: tr
 .wallet-adapter-modal-middle-button { background: var(--accent-fill) !important; color: var(--ink) !important; border-radius: 2px !important; font-size: 15px !important; }
 .wallet-adapter-dropdown-list { background: var(--ground) !important; border: 1px solid var(--rule-strong) !important; border-radius: 2px !important; box-shadow: none !important; }
 .wallet-adapter-dropdown-list-item { color: var(--ink) !important; font-family: var(--sans) !important; border-radius: 0 !important; }
-.wallet-adapter-dropdown-list-item:hover { background: var(--ground2) !important; }
+.wallet-adapter-dropdown-list-item:hover { background: var(--hover) !important; }
 
 footer.site-footer { margin-top: 56px; padding-top: 14px; border-top: 1px solid var(--rule); font-size: 12.5px; color: var(--muted); line-height: 1.5; }
 footer.site-footer p { margin: 0 0 8px; }
@@ -122,7 +124,7 @@ footer.site-footer p { margin: 0 0 8px; }
   .titlebar-in { padding: 0 14px; gap: 10px; }
   button, .btn, input, .seg button { min-height: 44px; }
 }
-@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 
 /* review notes 2026-09-19: phone title bar room, 44 px Compare links, no purple glyph in the wallet modal */
 .wallet-adapter-modal-middle svg { filter: grayscale(1); }
@@ -131,4 +133,58 @@ footer.site-footer p { margin: 0 0 8px; }
   .titlebar .wordmark { letter-spacing: 0.22em; text-indent: 0.22em; }
   .wallet-adapter-button, .wallet-adapter-button-trigger { padding: 8px 10px !important; white-space: nowrap !important; }
   .row .act a { display: inline-flex; align-items: center; min-height: 44px; }
+}
+
+.chart { margin: 12px 0 16px; }
+.chart-head { display: flex; flex-wrap: wrap; gap: 10px; align-items: baseline; margin-bottom: 6px; }
+.chart-plot { display: block; width: 100%; height: 220px; touch-action: pan-y; }
+@media (min-width: 641px) { .chart-plot { height: 260px; } }
+.chart-plot text { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.chart-plot .chart-last-label { fill: var(--ink); }
+.chart-plot .chart-ref-label { fill: var(--accent); }
+.chart-grid { stroke: var(--rule); stroke-width: 1; }
+.chart-line { fill: none; stroke: var(--ink); stroke-width: 2; }
+.chart-ref { stroke: var(--accent); stroke-width: 1; stroke-dasharray: 4 3; }
+.chart-cross { stroke: var(--rule-strong); stroke-width: 1; }
+.chart-cross, .chart-tip-g { pointer-events: none; }
+.chart-dot { fill: var(--ink); }
+.chart-tip { fill: var(--ground2); stroke: var(--rule-strong); stroke-width: 1; }
+.chart-tip-g { transition: opacity 160ms; }
+.chart-data { font-size: 13px; }
+.chart-data summary { color: var(--muted); cursor: pointer; }
+
+.matrix { border-collapse: separate; border-spacing: 0; border-top: 1px solid var(--rule); border-left: 1px solid var(--rule); min-width: 100%; margin: 8px 0 10px; }
+.matrix th, .matrix td { border-bottom: 1px solid var(--rule); border-right: 1px solid var(--rule); padding: 8px 10px; text-align: left; vertical-align: top; }
+.matrix th.rowlab { position: sticky; left: 0; z-index: 1; width: 112px; background: var(--ground); border-right: 1px solid var(--rule-strong); color: var(--muted); font-size: 12.5px; font-weight: 400; }
+.matrix td { min-width: 180px; font-family: var(--mono); font-size: 13.5px; }
+.matrix tbody tr:nth-child(even) th.rowlab, .matrix tbody tr:nth-child(even) td { background: #f2f0ea; }
+.matrix tr:last-child th.rowlab { border-bottom: 1px solid var(--rule-strong); }
+.matrix .detail { display: block; font-family: var(--sans); font-size: 13px; color: var(--muted); margin-top: 2px; }
+.matrix .text { font-family: var(--sans); font-size: 13px; }
+.matrix .sym { font-family: var(--mono); font-size: 15px; }
+.matrix .win { color: var(--accent); }
+.matrix .btn { display: inline-flex; align-items: center; min-height: 44px; }
+
+.sum { font-size: 19px; line-height: 1.45; margin: 0 0 8px; }
+.amt { color: var(--accent); }
+.sum .amt { font-family: var(--font-archivo), var(--sans); font-weight: 700; }
+.details { border-top: 1px solid var(--rule); margin: 14px 0 0; }
+.details > summary { color: var(--muted); cursor: pointer; padding: 10px 0; min-height: 44px; }
+
+.spark { display: block; width: 100%; height: 28px; display: block; }
+.spark-line { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+.spark-dot { fill: var(--ink); }
+.spark-wait, .spark-none { display: block; height: 28px; }
+.spark-none { line-height: 28px; }
+.matrix .fade { display: block; }
+.fade { animation: fade-in 180ms cubic-bezier(.23, 1, .32, 1); }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+.matrix .btn:active { transform: scale(.97); }
+
+@media (hover: hover) and (pointer: fine) {
+  .row:hover { background: var(--hover); }
+  .matrix tbody:has(td:nth-child(2):hover) td:nth-child(2),
+  .matrix tbody:has(td:nth-child(3):hover) td:nth-child(3),
+  .matrix tbody:has(td:nth-child(4):hover) td:nth-child(4),
+  .matrix tbody:has(td:nth-child(5):hover) td:nth-child(5) { background: var(--hover); }
 }

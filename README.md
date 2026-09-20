@@ -8,7 +8,7 @@ Built for the Stocklana hackathon (Solana Foundation, September 2026).
 
 - Company page: every wrapper of a company (xStocks, Ondo, Backpack .US, Tessera, PreStocks) ranked by the intent you pick (hold, trade now, cheapest, redeemable), each with a one-line "what you own".
 - Label: at your size, the reference price and its source, pool price, premium in percent and in dollars, US session state, price impact, expected and minimum receive (the quote checked by a server-side simulation), fees in and out, round trip, what jup.ag would deliver, then a Jupiter Swap API transaction you sign in your wallet.
-- Holdings: connect or paste a wallet; every wrapper position explained from live mint state (balance as the wallet shows it, issuer powers, transfer fee, next dated event), with a sell-now vs mark-value panel for pre-IPO tokens.
+- Portfolio: connect or paste a wallet; every wrapper position explained from live mint state (balance as the wallet shows it, issuer powers, transfer fee, next dated event), with a sell-now vs mark-value panel for pre-IPO tokens.
 - Rules, fee ledger and sources are public pages.
 
 ## Money, stated plainly

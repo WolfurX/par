@@ -6,6 +6,8 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { VersionedTransaction } from "@solana/web3.js";
 import { companyById, wrappersForCompany } from "@/lib/registry";
 import { fmtAge, fmtPct, fmtUnits, fmtUsd } from "@/lib/units";
+import type { Candle, HistoryRange } from "@/lib/history";
+import PriceChart from "@/components/PriceChart";
 
 type Side = "buy" | "sell";
 
@@ -35,6 +37,15 @@ interface LabelPayload {
 
 interface Receipt { signature: string; receivedRaw?: string; expectedRaw: string; minimumRaw: string; feeRaw?: string; feeAccount?: string }
 
+interface HistoryPayload {
+  symbol: string;
+  candles: Candle[];
+  reference: { price: number; source: string; ageSec: number } | null;
+  pool: { pairAddress: string; dexId: string };
+  source: string;
+  fetchedAt: number;
+}
+
 const issuerName: Record<string, string> = { xstocks: "xStocks (Backed)", ondo: "Ondo", backpack: "Backpack", tessera: "Tessera", prestocks: "PreStocks" };
 
 function b64ToBytes(b64: string): Uint8Array {
@@ -49,20 +60,31 @@ function bytesToB64(bytes: Uint8Array): string {
   return btoa(s);
 }
 
-export default function LabelPage({ params }: { params: Promise<{ company: string; wrapper: string }> }) {
+export default function LabelPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ company: string; wrapper: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
   const { company, wrapper } = use(params);
+  const sp = use(searchParams);
+  const initialSize = Math.min(1_000_000, Math.max(1, Number(sp.size) || 1000));
   const c = companyById.get(company);
   const w = useMemo(() => wrappersForCompany(company).find((x) => x.symbol === decodeURIComponent(wrapper)), [company, wrapper]);
   const { publicKey, signTransaction, connected } = useWallet();
-  const [size, setSize] = useState(1000);
-  const [sizeInput, setSizeInput] = useState("1000");
+  const [size, setSize] = useState(initialSize);
+  const [sizeInput, setSizeInput] = useState(String(initialSize));
   const [side, setSide] = useState<Side>("buy");
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [data, setData] = useState<LabelPayload | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [tessera, setTessera] = useState<{ registered: boolean; guard: { ok: boolean; reason?: string }; code: string; rentLamports: number } | null>(null);
+  const [hrange, setHrange] = useState<HistoryRange>("7d");
+  const [history, setHistory] = useState<HistoryPayload | null>(null);
   const timer = useRef<number | null>(null);
 
   const load = useCallback(() => {
@@ -95,6 +117,20 @@ export default function LabelPage({ params }: { params: Promise<{ company: strin
     if (!publicKey || !w || w.issuer !== "tessera") { setTessera(null); return; }
     fetch(`/api/tessera?user=${publicKey.toBase58()}`).then((r) => r.ok ? r.json() : null).then(setTessera).catch(() => setTessera(null));
   }, [publicKey, w]);
+
+  useEffect(() => {
+    if (!w) return;
+    let cancelled = false;
+    fetch(`/api/history/${w.mint}?range=${hrange}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((h) => { if (!cancelled && h) setHistory(h); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [w, hrange]);
+
+  useEffect(() => {
+    setDetailsOpen(window.matchMedia("(min-width: 641px)").matches);
+  }, []);
 
   if (!c || !w) return <main><p className="warn">Unknown wrapper.</p></main>;
 
@@ -153,10 +189,35 @@ export default function LabelPage({ params }: { params: Promise<{ company: strin
 
   const m = data?.row.multiplier ?? 1;
   const units = (raw: string | undefined) => (raw ? fmtUnits((Number(raw) / 10 ** w.decimals) * m) : "");
-  const jupUrl = `https://jup.ag/swap/${side === "buy" ? `USDC-${w.mint}` : `${w.mint}-USDC`}`;
 
   const dash = <span className="muted">-</span>;
   const quoteAge = data ? Math.floor(Date.now() / 1000) - (data.buy?.quotedAt ?? data.generatedAt) : 0;
+
+  const line1: React.ReactNode = !data ? (
+    <>For {fmtUsd(size, 0)} USDC you get {dash} {w.symbol}</>
+  ) : side === "buy" ? (
+    <>
+      For {fmtUsd(data.size, 0)} USDC you get {data.row.expectedUnits != null ? <span className="amt fade" key={data.buy?.quotedAt ?? data.generatedAt}>{fmtUnits(data.row.expectedUnits)}</span> : dash} {w.symbol}
+    </>
+  ) : (
+    <>
+      For {data.row.expectedUnits != null ? fmtUnits(data.row.expectedUnits) : dash} {w.symbol} you get{" "}
+      {data.row.roundTripUsdc != null ? <span className="amt fade" key={data.generatedAt}>{fmtUsd(data.size + data.row.roundTripUsdc)}</span> : dash} USDC
+    </>
+  );
+  const line2: React.ReactNode = !data ? (
+    dash
+  ) : data.row.premium == null ? (
+    "No reference for this token"
+  ) : (
+    <>
+      {Math.abs(data.row.premium * 100).toFixed(2)}% {data.row.premium >= 0 ? "above" : "below"} the reference ({fmtUsd(Math.abs(data.row.premiumUsd ?? 0), 0)} USD)
+    </>
+  );
+  const roundTripPct = data?.row.roundTripPct ?? null;
+  const line3: React.ReactNode = (
+    <>Round trip about {roundTripPct != null ? `${(Math.abs(roundTripPct) * 100).toFixed(1)}%` : dash} if sold straight back</>
+  );
   const left: { k: string; v: React.ReactNode }[] = [
     {
       k: "Reference",
@@ -228,7 +289,7 @@ export default function LabelPage({ params }: { params: Promise<{ company: strin
     {
       k: "Compare",
       v: data ? (
-        <>{data.row.compare.jupOutUnits != null ? <>jup.ag would deliver {fmtUnits(data.row.compare.jupOutUnits)} {w.symbol} at {(data.row.compare.jupFeeBps ?? 10) / 100}%{data.row.compare.deltaUnits != null ? (Math.abs(data.row.compare.deltaUnits) < 1e-6 ? ": same amount." : `: ${data.row.compare.deltaUnits > 0 ? "more" : "less"} by ${fmtUnits(Math.abs(data.row.compare.deltaUnits))}.`) : "."}</> : "jup.ag comparison unavailable"}</>
+        <>{data.row.compare.jupOutUnits != null ? <>Jupiter direct would deliver {fmtUnits(data.row.compare.jupOutUnits)} {w.symbol}{data.row.compare.deltaUnits != null ? (Math.abs(data.row.compare.deltaUnits) < 1e-6 ? ": same amount." : `: ${data.row.compare.deltaUnits > 0 ? "more" : "less"} by ${fmtUnits(Math.abs(data.row.compare.deltaUnits))}.`) : "."}</> : "Jupiter direct comparison unavailable"}</>
       ) : dash,
     },
     { k: "Routing", v: data ? "Metis (Jupiter Swap API)" : dash },
@@ -244,9 +305,8 @@ export default function LabelPage({ params }: { params: Promise<{ company: strin
         <Link href={`/c/${c.id}`}>{c.name}</Link> · {issuerName[w.issuer]}
       </p>
       <h1>
-        <span className="mono">{w.symbol}</span>
+        {side === "buy" ? "Buy" : "Sell"} <span className="mono">{w.symbol}</span>
       </h1>
-      <p className="small">{data?.legal.line ?? ""}</p>
 
       <div className="strip">
         <label className="small muted" htmlFor="size">Size, USDC</label>
@@ -259,7 +319,33 @@ export default function LabelPage({ params }: { params: Promise<{ company: strin
 
       {err ? <p className="warn">{err}</p> : null}
 
-      <div className="cols" aria-busy={loading}>
+      <p className="sum">{line1}</p>
+      <p className="sum">{line2}</p>
+      <p className="sum">{line3}</p>
+
+      <div className="controls">
+        <button onClick={buildAndSign} disabled={!connected || !data || data.row.noLiquidity}>Build swap, sign in wallet</button>
+        {!connected ? <span className="small muted">Connect a wallet to build; the label works without one.</span> : null}
+      </div>
+      {status ? <p className="small">{status}</p> : null}
+
+      {history === null ? null : history.candles.length === 0 ? (
+        <p className="small muted">No price history for this pool yet.</p>
+      ) : (
+        <div className="chart">
+          <PriceChart symbol={history.symbol} candles={history.candles} reference={history.reference?.price ?? null} range={hrange} onRange={setHrange} />
+          <p className="small muted">
+            Pool price from {history.pool.dexId} via {history.source === "geckoterminal" ? "GeckoTerminal" : "Jupiter"}, {fmtAge(Math.floor(Date.now() / 1000) - history.fetchedAt)}
+            {history.reference ? <>. Reference {history.reference.source}, {fmtAge(history.reference.ageSec)}</> : null}
+          </p>
+        </div>
+      )}
+
+      <details className="details" open={detailsOpen} onToggle={(e) => setDetailsOpen(e.currentTarget.open)}>
+        <summary>Details</summary>
+        <p className="small">{data?.legal.line ?? ""}</p>
+
+        <div className="cols" aria-busy={loading}>
         <table className="kv">
           <tbody>
             {left.map((r) => (
@@ -281,14 +367,12 @@ export default function LabelPage({ params }: { params: Promise<{ company: strin
           </tbody>
         </table>
       </div>
-      <p className="small muted">{data ? `Reference ${data.reference ? fmtAge(data.reference.ageSec) : "n/a"}, quote ${fmtAge(quoteAge)}, simulated.` : " "}</p>
+        <p className="small muted">{data ? `Reference ${data.reference ? fmtAge(data.reference.ageSec) : "n/a"}, quote ${fmtAge(quoteAge)}, simulated.` : " "}</p>
 
-      <div className="controls">
-        <button onClick={buildAndSign} disabled={!connected || !data || data.row.noLiquidity}>Build swap, sign in wallet</button>
-        <a className="btn secondary" href={jupUrl} target="_blank" rel="noreferrer">Open in Jupiter</a>
-        {!connected ? <span className="small muted">Connect a wallet to build; the label works without one.</span> : null}
-      </div>
-      {status ? <p className="small">{status}</p> : null}
+      <p className="small muted">
+        Sources: {data?.legal.sources.map((s, i) => <span key={s.url}>{i ? " · " : ""}<a href={s.url} target="_blank" rel="noreferrer">{s.title}</a></span>)}. Formulas on <Link href="/rules">rules</Link>.
+      </p>
+      </details>
 
       {receipt ? (
         <dl className="label">
@@ -309,10 +393,6 @@ export default function LabelPage({ params }: { params: Promise<{ company: strin
           ) : null}
         </dl>
       ) : null}
-
-      <p className="small muted">
-        Sources: {data?.legal.sources.map((s, i) => <span key={s.url}>{i ? " · " : ""}<a href={s.url} target="_blank" rel="noreferrer">{s.title}</a></span>)}. Formulas on <Link href="/rules">rules</Link>.
-      </p>
     </main>
   );
 }

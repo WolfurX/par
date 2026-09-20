@@ -1,5 +1,5 @@
 // DexScreener depth and volume, with a Jupiter liquidity fallback on DexScreener errors.
-// Raw-unit rule: DexScreener prices are per raw token; this module never reads or exports a price.
+// Raw-unit rule: DexScreener prices are per raw token; topPool.priceUsdRaw is the only price here and it is raw.
 
 import type { PoolInfo } from "./types";
 
@@ -34,6 +34,7 @@ interface DexScreenerPair {
   quoteToken: { address: string; symbol: string };
   liquidity?: { usd?: number };
   volume?: { h24?: number };
+  priceUsd?: string;
 }
 
 function nowSec(): number {
@@ -70,6 +71,7 @@ async function fetchDexScreener(mint: string): Promise<PoolInfo> {
       pairAddress: top.pairAddress,
       quoteSymbol: top.quoteToken?.symbol ?? "",
       liquidityUsd: top.liquidity?.usd ?? 0,
+      priceUsdRaw: Number(top.priceUsd ?? 0),
     };
   }
   return info;

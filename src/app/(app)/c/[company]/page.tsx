@@ -2,32 +2,34 @@
 
 import Link from "next/link";
 import { Fragment, use, useEffect, useState } from "react";
-import { INTENTS, intentNotes, type Intent } from "@/lib/ranking";
+import { INTENTS, type Intent } from "@/lib/ranking";
 import { fmtAge, fmtPct, fmtUsd } from "@/lib/units";
+import type { Candle } from "@/lib/history";
+import Sparkline from "@/components/Sparkline";
 
 interface Row {
-  rank: number;
   mint: string;
   symbol: string;
   issuer: string;
-  name: string;
-  unitPrice: number | null;
-  multiplier: number;
   reference: { price: number; source: string; ageSec: number; pythMark?: boolean; stale: boolean } | null;
+  unitPrice: number | null;
   premium: number | null;
   premiumUsd: number | null;
+  impact: number | null;
+  roundTripUsdc: number | null;
+  roundTripPct: number | null;
+  feesInBps: number;
+  feesOutBps: number;
+  routeLabels: string[];
+  quotedAt: number | null;
   liquidityUsd: number;
   volume24hUsd: number;
-  noLiquidity: boolean;
-  thin: boolean;
-  belowMark: boolean;
-  own: string;
-  holdScore: number;
-  redeemTier: number;
+  form: string;
+  redemption: string;
 }
 interface Payload {
   company: { id: string; name: string; ticker?: string; kind: "public" | "private" };
-  intent: Intent;
+  sort: Intent;
   size: number;
   feeBps: number;
   market: { session: string; isOpen: boolean; text: string } | null;
@@ -37,17 +39,28 @@ interface Payload {
 }
 
 const issuerName: Record<string, string> = { xstocks: "xStocks (Backed)", ondo: "Ondo", backpack: "Backpack", tessera: "Tessera", prestocks: "PreStocks" };
+const noRoute = <span className="muted">no route at this size</span>;
 
-export default function CompanyPage({ params }: { params: Promise<{ company: string }> }) {
+export default function CompanyPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ company: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
   const { company } = use(params);
-  const [intent, setIntent] = useState<Intent>("hold");
+  const sp = use(searchParams);
+  const [sort, setSort] = useState<Intent>(() => (INTENTS.some((i) => i.id === sp.sort) ? (sp.sort as Intent) : "price"));
+  const [size, setSize] = useState(() => Math.min(1_000_000, Math.max(1, Number(sp.size) || 1000)));
+  const [sizeInput, setSizeInput] = useState(() => String(size));
   const [data, setData] = useState<Payload | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [spark, setSpark] = useState<Record<string, number[]>>({});
 
   useEffect(() => {
     let alive = true;
     setErr(null);
-    fetch(`/api/company/${company}?intent=${intent}`)
+    fetch(`/api/company/${company}?sort=${sort}&size=${size}`)
       .then(async (r) => {
         if (!r.ok) throw new Error((await r.json()).error ?? r.statusText);
         return r.json();
@@ -57,15 +70,178 @@ export default function CompanyPage({ params }: { params: Promise<{ company: str
     return () => {
       alive = false;
     };
-  }, [company, intent]);
+  }, [company, sort, size]);
+
+  const mintList = data ? data.rows.map((r) => r.mint).sort().join(",") : "";
+  useEffect(() => {
+    if (!mintList) return;
+    let alive = true;
+    for (const mint of mintList.split(",")) {
+      fetch(`/api/history/${mint}?range=7d`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((h: { candles: Candle[] } | null) => (h ? h.candles.map((k) => k.c) : []))
+        .catch(() => [] as number[])
+        .then((closes) => alive && setSpark((s) => ({ ...s, [mint]: closes })));
+    }
+    return () => {
+      alive = false;
+    };
+  }, [mintList]);
+
+  function updateSort(next: Intent) {
+    setSort(next);
+    window.history.replaceState(null, "", `?sort=${next}&size=${size}`);
+  }
+
+  function commitSize(raw: string) {
+    const next = Math.min(1_000_000, Math.max(1, Number(raw) || 1000));
+    setSize(next);
+    setSizeInput(String(next));
+    window.history.replaceState(null, "", `?sort=${sort}&size=${next}`);
+  }
 
   if (err) return <main><p className="warn">{err}</p></main>;
-  if (!data) return <main><p className="muted">Loading references, pools and mids.</p></main>;
+  if (!data) return <main><p className="muted">Loading references, pools and quotes.</p></main>;
 
   const c = data.company;
   const refs = data.rows.filter((r) => r.reference).map((r) => r.reference!);
   const uniqueRefs = Array.from(new Map(refs.map((r) => [r.source, r])).values());
   const priced = data.rows.filter((r) => r.unitPrice != null);
+  const now = Math.floor(Date.now() / 1000);
+
+  const matrixRows: { k: string; cell: (r: Row, i: number) => React.ReactNode }[] = [
+    {
+      k: "Wrapper",
+      cell: (r) => (
+        <>
+          <Link href={`/c/${c.id}/${encodeURIComponent(r.symbol)}?size=${size}`} className="sym">
+            {r.symbol}
+          </Link>
+          <span className="detail">{issuerName[r.issuer] ?? r.issuer}</span>
+        </>
+      ),
+    },
+    {
+      k: "Price at size",
+      cell: (r, i) => (
+        <span className="fade" key={r.quotedAt ?? 0}>
+          {r.unitPrice == null ? (
+            noRoute
+          ) : (
+            <>
+              <span className={i === 0 ? "win" : undefined}>{fmtUsd(r.unitPrice)} USD</span>
+              <span className="detail">
+                route {r.routeLabels.join(" + ") || "none"}
+                {r.quotedAt != null ? `, ${fmtAge(now - r.quotedAt)}` : ""}
+              </span>
+            </>
+          )}
+        </span>
+      ),
+    },
+    {
+      k: "7 days",
+      cell: (r) => {
+        const closes = spark[r.mint];
+        if (!closes) return <span className="spark-wait" />;
+        return closes.length === 0 ? <span className="muted spark-none">no history</span> : <Sparkline closes={closes} />;
+      },
+    },
+    {
+      k: "Premium",
+      cell: (r) => (
+        <span className="fade" key={r.quotedAt ?? 0}>
+          {r.unitPrice == null ? (
+            noRoute
+          ) : r.premium == null ? (
+            "no reference"
+          ) : (
+            <>
+              {fmtPct(r.premium)}
+              <span className="detail">{fmtUsd(Math.abs(r.premiumUsd ?? 0), 0)} USD at this size</span>
+            </>
+          )}
+        </span>
+      ),
+    },
+    {
+      k: "Impact",
+      cell: (r) => (
+        <span className="fade" key={r.quotedAt ?? 0}>
+          {r.unitPrice == null ? noRoute : `${((r.impact ?? 0) * 100).toFixed(2)}%`}
+        </span>
+      ),
+    },
+    {
+      k: "Round trip",
+      cell: (r) => (
+        <span className="fade" key={r.quotedAt ?? 0}>
+          {r.unitPrice == null || r.roundTripPct == null ? (
+            noRoute
+          ) : (
+            <>
+              {fmtPct(r.roundTripPct, 1)}
+              <span className="detail">{fmtUsd(data.size + (r.roundTripUsdc ?? 0), 0)} USDC back</span>
+            </>
+          )}
+        </span>
+      ),
+    },
+    {
+      k: "Fees in",
+      cell: (r) => (
+        <>
+          {r.feesInBps / 100}%
+          <span className="detail">
+            Parsec {data.feeBps / 100}% + issuer {(r.feesInBps - data.feeBps) / 100}%
+          </span>
+        </>
+      ),
+    },
+    {
+      k: "Fees out",
+      cell: (r) => (
+        <>
+          {r.feesOutBps / 100}%
+          <span className="detail">
+            Parsec {data.feeBps / 100}% + issuer {(r.feesOutBps - data.feeBps) / 100}%
+          </span>
+        </>
+      ),
+    },
+    {
+      k: "What it is",
+      cell: (r) => (
+        <>
+          <span className="text">{r.form}</span>
+          <Link href={`/c/${c.id}/${encodeURIComponent(r.symbol)}?size=${size}`} className="detail">
+            Read terms
+          </Link>
+        </>
+      ),
+    },
+    {
+      k: "Exit",
+      cell: (r) => <span className="text">{r.redemption}</span>,
+    },
+    {
+      k: "Liquidity",
+      cell: (r) => (
+        <>
+          {fmtUsd(r.liquidityUsd, 0)} USD
+          <span className="detail">24h {fmtUsd(r.volume24hUsd, 0)} USD</span>
+        </>
+      ),
+    },
+    {
+      k: "",
+      cell: (r) => (
+        <Link className="btn" href={`/c/${c.id}/${encodeURIComponent(r.symbol)}?size=${size}`}>
+          Buy {r.symbol}
+        </Link>
+      ),
+    },
+  ];
 
   return (
     <main>
@@ -104,52 +280,33 @@ export default function CompanyPage({ params }: { params: Promise<{ company: str
         ) : null}
       </dl>
 
-      <div className="controls">
-        <div className="seg" role="group" aria-label="Intent">
+      <div className="strip">
+        <label className="small muted" htmlFor="size">Size, USDC</label>
+        <input id="size" inputMode="decimal" value={sizeInput} onChange={(e) => setSizeInput(e.target.value)} onBlur={() => commitSize(sizeInput)} style={{ width: "9em" }} />
+        <span className="small muted">Sort by</span>
+        <div className="seg" role="group" aria-label="Sort by">
           {INTENTS.map((it) => (
-            <button key={it.id} aria-pressed={intent === it.id} onClick={() => setIntent(it.id)}>
+            <button key={it.id} aria-pressed={sort === it.id} onClick={() => updateSort(it.id)}>
               {it.label}
             </button>
           ))}
         </div>
-        <span className="small muted">Premium at mid, fee {data.feeBps / 100}% printed on the label. Sized quotes on each row&apos;s label.</span>
       </div>
-      <p className="small muted">{intentNotes[intent]}</p>
+      <p className="small muted">{INTENTS.find((i) => i.id === sort)?.line}</p>
 
-      <div className="row-list">
-        {data.rows.map((r) => (
-          <div className="row" key={r.mint}>
-            <div className="rank">{r.rank}</div>
-            <div>
-              <div className="head">
-                <Link href={`/c/${c.id}/${encodeURIComponent(r.symbol)}`} className="sym">
-                  {r.symbol}
-                </Link>
-                <span className="issuer">{issuerName[r.issuer] ?? r.issuer}</span>
-                {r.noLiquidity ? <span className="issuer">no on-chain liquidity</span> : null}
-                {r.thin && !r.noLiquidity ? <span className="issuer">thin</span> : null}
-              </div>
-              <div className="nums">
-                <span>{r.unitPrice != null ? `${fmtUsd(r.unitPrice)} USD per unit` : "no mid"}</span>
-                <span>{r.premium != null ? `${fmtPct(r.premium)} to reference` : "no reference"}</span>
-                <span>liq {fmtUsd(r.liquidityUsd, 0)}</span>
-                <span>24h {fmtUsd(r.volume24hUsd, 0)}</span>
-                {intent === "hold" ? <span>hold score {r.holdScore}</span> : null}
-                {intent === "redeemable" ? <span>tier {r.redeemTier}</span> : null}
-              </div>
-              {r.belowMark ? (
-                <div className="small warn">Below mark: no enforceable redemption at the mark; the discount is not a payout.</div>
-              ) : null}
-              <div className="own">{r.own}</div>
-            </div>
-            <div className="act">
-              <div>
-                <Link href={`/c/${c.id}/${encodeURIComponent(r.symbol)}`}>Compare</Link>
-              </div>
-              {r.reference ? <div className="muted small">{fmtAge(r.reference.ageSec)}</div> : null}
-            </div>
-          </div>
-        ))}
+      <div className="tbl">
+        <table className="matrix">
+          <tbody>
+            {matrixRows.map((row) => (
+              <tr key={row.k || "buy"}>
+                <th scope="row" className="rowlab">{row.k}</th>
+                {data.rows.map((r, i) => (
+                  <td key={r.mint}>{row.cell(r, i)}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
       <p className="small muted">Generated {fmtAge(Math.floor(Date.now() / 1000) - data.generatedAt)}. Rows never move for fees or referrals; see <Link href="/rules">rules</Link>.</p>
     </main>

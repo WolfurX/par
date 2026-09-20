@@ -618,6 +618,47 @@ export async function orderCompare(inputMint: string, outputMint: string, amount
   return { jupOrderOutRaw: last.outAmount, jupOrderFeeBps: last.feeBps, jupOrderAgeSec: Math.round((Date.now() - last.at) / 1000), jupOrderStale: true };
 }
 
+// ---------- quoteAtSize ----------
+
+const SIZED_TTL_MS = 30_000;
+const sizedQuotes = new Map<string, { at: number; value: QuoteResult }>();
+
+/**
+ * Quote only: no taker, no build, no simulation. Cached 30 s per mint, side and size. /order takes its own fee on
+ * the USDC leg (reported as feeBps, 10 bps on the pairs checked 2026-09-20), which is what FEE_BPS also assumes.
+ */
+export async function quoteAtSize(mint: string, side: Side, amountRaw: string): Promise<QuoteResult | null> {
+  const key = `${mint}:${side}:${amountRaw}`;
+  const hit = sizedQuotes.get(key);
+  if (hit && Date.now() - hit.at < SIZED_TTL_MS) return hit.value;
+  const { inputMint, outputMint } = mintsFor(mint, side);
+  const r = await jupGet<{ outAmount?: string; otherAmountThreshold?: string; priceImpactPct?: string; slippageBps?: number; feeBps?: number; routePlan?: RoutePlanLeg[] }>(
+    "/order",
+    new URLSearchParams({ inputMint, outputMint, amount: amountRaw }),
+  );
+  const b = r.body;
+  if (r.status !== 200 || !b.outAmount) return null;
+  const value: QuoteResult = {
+    mint,
+    side,
+    inputMint,
+    outputMint,
+    inAmountRaw: amountRaw,
+    outAmountRaw: b.outAmount,
+    expectedRaw: b.outAmount,
+    minimumRaw: b.otherAmountThreshold ?? b.outAmount,
+    slippageBps: Number(b.slippageBps ?? 0),
+    priceImpactPct: Number(b.priceImpactPct) || 0,
+    feeBps: Number(b.feeBps ?? 0),
+    feeAmountRaw: feeEstimate(side, amountRaw, b.outAmount).toString(),
+    routeLabels: (b.routePlan ?? []).map((l) => l.swapInfo.label),
+    excludedDexes: [],
+    quotedAt: Math.floor(Date.now() / 1000),
+  };
+  sizedQuotes.set(key, { at: Date.now(), value });
+  return value;
+}
+
 // ---------- shared quote-and-simulate ladder ----------
 
 export function defaultSlippageBps(liquidityUsd?: number): number {

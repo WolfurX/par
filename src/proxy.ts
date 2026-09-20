@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const APP_PATHS = ["/companies", "/c", "/holdings", "/rules", "/fees", "/about", "/setup"];
+const APP_PATHS = ["/companies", "/c", "/holdings", "/portfolio", "/rules", "/fees", "/about", "/setup"];
 
 export function proxy(request: NextRequest) {
   const hosts = (process.env.APP_HOSTS ?? "").split(",").map((h) => h.trim()).filter(Boolean);

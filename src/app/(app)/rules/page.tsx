@@ -65,12 +65,12 @@ export default function RulesPage() {
         changes what the reference means.
       </p>
 
-      <h2>Intents</h2>
+      <h2>Sort orders</h2>
       <table>
         <tbody>
           {Object.entries(intentNotes).map(([k, v]) => (
             <tr key={k}>
-              <td style={{ width: "9em" }}>{k === "trade" ? "Trade now" : k[0].toUpperCase() + k.slice(1)}</td>
+              <td style={{ width: "9em" }}>{k[0].toUpperCase() + k.slice(1)}</td>
               <td>{v}</td>
             </tr>
           ))}
