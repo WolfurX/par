@@ -42,13 +42,13 @@ export default function RulesPage() {
         simulated delivery differs from the quote by more than 0.05%, the simulated figure is printed and the route is marked. Minimum is
         the on-chain threshold at the chosen slippage (50 bps on pools above 500K USD, 100 bps below), the only figure the chain enforces.
         Route legs that deliver under 0.999× the quote are excluded for that token; as of 2026-09-16 that is Manifest on PreStocks, which
-        ignores the 0.5% transfer fee.
+        ignores the transfer fee.
       </p>
 
       <h2>Fees and round trip</h2>
       <p>
         Fees in: Parsec {FEE_BPS / 100}% on the USDC input, plus the issuer&apos;s transfer fee withheld on the pool-to-wallet transfer
-        (Tessera 0.2%, PreStocks 0.5%, others 0). Fees out: the same on the way back. Network: 5,000 lamports per signature; a new
+        (Tessera 0.2%, PreStocks 1%, others 0). Fees out: the same on the way back. Network: 5,000 lamports per signature; a new
         Token-2022 token account costs 1,488,440 lamports of rent. Round trip quotes the buy, then a sell of exactly the expected amount, and
         prints absolute USDC and percent.
       </p>

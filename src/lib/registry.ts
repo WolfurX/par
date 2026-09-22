@@ -57,7 +57,7 @@ export const wrappers: Wrapper[] = [
   { mint: "TKLSidmLVt3cqGaaodG8tyRzoANfQwoh67AccjmubeZ", issuer: "tessera", symbol: "tKalshi", name: "T-Kalshi", decimals: 9, companyId: "kalshi", reference: { kind: "tessera", code: "tKalshi" } },
   { mint: "TSPXcLV76s6V2zDiZQ18kBfcbnjaE2ZzNT3ga2Pd99v", issuer: "tessera", symbol: "tSpaceX", name: "T-SpaceX", decimals: 9, companyId: "spcx", reference: { kind: "tessera", code: "tSpaceX" } },
 
-  // PreStocks: Token-2022, 9 decimals, 50 bps transfer fee, permanent delegate, pausable, scaled UI amount (OPENAI x1.4861347, SPACEX x5)
+  // PreStocks: Token-2022, 9 decimals, 100 bps transfer fee (50 until epoch 1039), permanent delegate, pausable, scaled UI amount (OPENAI x1.4861347, SPACEX x5)
   { mint: "PreweJYECqtQwBtpxHL171nL2K6umo692gTm7Q3rpgF", issuer: "prestocks", symbol: "OPENAI", name: "OpenAI PreStocks", decimals: 9, companyId: "openai", reference: { kind: "prestocks", symbol: "OPENAI" } },
   { mint: "PreLWGkkeqG1s4HEfFZSy9moCrJ7btsHuUtfcCeoRua", issuer: "prestocks", symbol: "KALSHI", name: "Kalshi PreStocks", decimals: 9, companyId: "kalshi", reference: { kind: "prestocks", symbol: "KALSHI" } },
   { mint: "Pren1FvFX6J3E4kXhJuCiAD5aDmGEb7qJRncwA8Lkhw", issuer: "prestocks", symbol: "ANTHROPIC", name: "Anthropic PreStocks", decimals: 9, companyId: "anthropic", reference: { kind: "prestocks", symbol: "ANTHROPIC" } },

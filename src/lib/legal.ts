@@ -86,9 +86,9 @@ export const legalLines: Record<string, LegalLine> = {
     entity: "PreStocks (issuer entity not publicly readable as of 2026-09-16)",
     form: "token tracking an SPV position",
     line:
-      "A token tracking an SPV's exposure to the company, issued by PreStocks; the issuer entity and terms were not publicly readable as of 2026-09-16. No ownership, vote or dividend rights. The issuer holds a permanent delegate (can move or burn your balance) and can freeze and pause. 0.5% is withheld on every transfer. No published redemption commitment: SpaceX listed in June 2026 and no SPACEX redemption has been announced.",
+      "A token tracking an SPV's exposure to the company, issued by PreStocks; the issuer entity and terms were not publicly readable as of 2026-09-16. No ownership, vote or dividend rights. The issuer holds a permanent delegate (can move or burn your balance) and can freeze and pause. 1% is withheld on every transfer. No published redemption commitment: SpaceX listed in June 2026 and no SPACEX redemption has been announced.",
     powers: ["freeze", "permanent delegate", "pause"],
-    transferFeeBps: 50,
+    transferFeeBps: 100,
     redemption: "No published commitment; the issuer has announced no redemption for any token, including SPACEX after the June 2026 listing.",
     excluded: ["US persons", "other ineligible persons per the site footer"],
     sources: [

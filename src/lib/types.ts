@@ -141,7 +141,7 @@ export interface Holding {
   balanceRaw: string;
   balanceUnits: number; // raw x multiplier / 10^dec
   state: MintState;
-  powers: string; // one line, e.g. "freeze: yes · permanent delegate: yes · paused: no · transfer hook: none · transfer fee 0.5%"
+  powers: string; // one line, e.g. "freeze: yes · permanent delegate: yes · paused: no · transfer hook: none · transfer fee 1%"
   nextEvent?: { at?: number; text: string; sourceUrl?: string };
 }
 
