@@ -47,8 +47,8 @@ export interface Reference {
   currency: "USD";
   source: string; // human label: "Pyth Core AAPL account", "Tessera auction mark", ...
   sourceUrl?: string;
-  asOf: number; // unix seconds of the upstream timestamp
-  ageSec: number; // computed at response time
+  asOf: number | null; // unix seconds the price dates from; null when the upstream publishes no time (issuer marks)
+  ageSec: number | null; // computed at response time; null with asOf
   stale: boolean; // true when served from the last-good cache after failures
   pythMark?: boolean; // show the Pyth attribution
 }

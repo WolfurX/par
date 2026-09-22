@@ -2,10 +2,17 @@
 // whether it came from the last-good cache.
 //
 // Order, for a public name:
-//   pyth-core (on-chain, keyless) -> pyth-pro -> backpack-external -> xstocks-price-data
+//   pyth-core (on-chain, keyless) -> pyth-pro -> backpack-external -> xstocks-price-data -> backpack-klines
 // Pyth Pro is fresher than the on-chain account (200 ms vs about 11 s), so when PYTH_PRO_API_KEY is set
 // and the equity feed is not known-unentitled, Pro leads for a pyth-core row. Without a key, or after a
-// 403, the effective order is exactly the one above.
+// 403, the effective order is exactly the one above. The last rung, backpack-klines, is the last hourly
+// bar on Backpack's External tape that had trades: it keeps a reference alive on a cold instance while
+// the market is closed, when the ticker and the xStocks quote carry nothing.
+//
+// Ages. Pyth Core, Pyth Pro and the klines bar carry their own time. The ticker and the xStocks quote
+// carry none, so they date from our fetch while a US session is running and from the end of the last
+// session otherwise (src/lib/sessions.ts); Pyth Pro equity times get the same cap. Tessera and PreStocks
+// publish no time for their marks, so asOf and ageSec are null on those rows.
 //
 // Pre-IPO names (Tessera, PreStocks) have no ladder: the issuer's own mark is the only reference that
 // means anything, so the row fails to its last-good value rather than to somebody else's number.
@@ -13,11 +20,13 @@
 // Caching: each upstream has a minimum interval between calls, held in an in-memory memo that doubles as
 // the rate limiter (PreStocks is bulk-only, one call per 20 s). Route handlers additionally get Next's
 // data cache through fetch({ next: { revalidate } }). Three failures in a row on one source open a
-// breaker that serves the last good value for 60 s.
+// breaker for 60 s; an open breaker skips its rung and the next is tried; only when every rung fails is
+// the freshest last-good value served, marked stale.
 
 import type { Company, Reference, ReferenceSource, Wrapper } from "./types";
 import { wrappers } from "./registry";
 import { readPythCoreOne } from "./pyth-core";
+import { usPriceAsOf } from "./sessions";
 
 const TESSERA_URL = "https://rest-api.tessera.pe/v1/public/token-details?symbol=x";
 const PRESTOCKS_URL = "https://prestocks.com/api/prestocks";
@@ -37,9 +46,11 @@ const BREAKER_FAILURES = 3;
 const BREAKER_WINDOW_SEC = 60;
 const UNENTITLED_SEC = 3600;
 
+const KLINES_LOOKBACK_SEC = 4 * 86400; // reaches back over a weekend plus a Monday holiday
+
 interface Fetched {
   price: number;
-  asOf: number; // unix seconds of the upstream timestamp, or of our fetch when the upstream carries none
+  asOf: number | null; // unix seconds the price dates from; null when the upstream publishes no time
   source: string;
   sourceUrl?: string;
   pythMark?: boolean;
@@ -95,16 +106,11 @@ const lastGood = new Map<string, Fetched>();
 const failures = new Map<string, number>();
 const openUntil = new Map<string, number>();
 
-async function attempt(key: string, run: () => Promise<Fetched>, errors: string[]): Promise<{ value: Fetched; stale: boolean } | null> {
+async function attempt(key: string, run: () => Promise<Fetched>, errors: string[]): Promise<Fetched | null> {
   const now = nowSec();
   const open = openUntil.get(key) ?? 0;
   if (now < open) {
-    const good = lastGood.get(key);
-    if (good) {
-      console.warn(`[reference] ${key}: breaker open ${open - now} s, serving last good ${now - good.asOf} s old`);
-      return { value: good, stale: true };
-    }
-    errors.push(`${key}: breaker open, no last good value`);
+    errors.push(`${key}: breaker open for another ${open - now} s`);
     return null;
   }
   try {
@@ -112,7 +118,7 @@ async function attempt(key: string, run: () => Promise<Fetched>, errors: string[
     failures.delete(key);
     openUntil.delete(key);
     lastGood.set(key, value);
-    return { value, stale: false };
+    return value;
   } catch (e) {
     errors.push(`${key}: ${e instanceof Error ? e.message : String(e)}`);
     // A cooldown rejection means we never called the upstream, so it cannot count as a failed call.
@@ -138,7 +144,7 @@ interface TesseraToken {
   markValuation?: number;
 }
 
-async function tesseraAll(): Promise<{ fetchedAt: number; rows: TesseraToken[] }> {
+async function tesseraAll(): Promise<TesseraToken[]> {
   return cached(`tessera:all`, TESSERA_TTL_SEC, async () => {
     let status = 0;
     // The service returns 500 on roughly one call in seven. Four tries (about 0.1% joint failure), then the breaker.
@@ -147,7 +153,7 @@ async function tesseraAll(): Promise<{ fetchedAt: number; rows: TesseraToken[] }
       if (res.ok) {
         const rows = await asJson<TesseraToken[]>(res, "tessera token-details");
         if (!Array.isArray(rows) || rows.length === 0) throw new Error("tessera token-details returned no rows");
-        return { fetchedAt: nowSec(), rows };
+        return rows;
       }
       status = res.status;
       if (status < 500) break;
@@ -158,12 +164,12 @@ async function tesseraAll(): Promise<{ fetchedAt: number; rows: TesseraToken[] }
 }
 
 async function tesseraRef(code: string): Promise<Fetched> {
-  const { fetchedAt, rows } = await tesseraAll();
+  const rows = await tesseraAll();
   const row = rows.find((r) => (r.code ?? "").toLowerCase() === code.toLowerCase());
   if (!row || typeof row.markPrice !== "number") throw new Error(`tessera: no markPrice for ${code}`);
   return {
     price: row.markPrice,
-    asOf: fetchedAt,
+    asOf: null,
     source: `Tessera auction mark (${row.code})`,
     sourceUrl: TESSERA_URL,
   };
@@ -176,24 +182,24 @@ interface PreStocksToken {
   tokenPrice?: number;
 }
 
-async function preStocksAll(): Promise<{ fetchedAt: number; rows: PreStocksToken[] }> {
+async function preStocksAll(): Promise<PreStocksToken[]> {
   return cached(`prestocks:bulk`, PRESTOCKS_TTL_SEC, async () => {
     // Bulk only. The per-symbol routes share a Vercel WAF bucket of roughly 22 to 34 calls a minute.
     const res = await fetch(PRESTOCKS_URL, { next: { revalidate: PRESTOCKS_TTL_SEC }, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
     if (!res.ok) throw new Error(`prestocks bulk HTTP ${res.status}`);
     const rows = await asJson<PreStocksToken[]>(res, "prestocks bulk");
     if (!Array.isArray(rows) || rows.length === 0) throw new Error("prestocks bulk returned no rows");
-    return { fetchedAt: nowSec(), rows };
+    return rows;
   });
 }
 
 async function preStocksRef(symbol: string): Promise<Fetched> {
-  const { fetchedAt, rows } = await preStocksAll();
+  const rows = await preStocksAll();
   const row = rows.find((r) => (r.symbol ?? "").toUpperCase() === symbol.toUpperCase());
   if (!row || typeof row.markPrice !== "number") throw new Error(`prestocks: no markPrice for ${symbol}`);
   return {
     price: row.markPrice,
-    asOf: fetchedAt,
+    asOf: null,
     source: `PreStocks mark (${symbol})`,
     sourceUrl: PRESTOCKS_URL,
   };
@@ -207,11 +213,11 @@ async function backpackRef(symbol: string): Promise<Fetched> {
     const body = await asJson<{ lastPrice?: string }>(res, `backpack ticker ${symbol}`);
     const price = Number(body.lastPrice);
     if (!Number.isFinite(price) || price <= 0) throw new Error(`backpack ticker ${symbol}: no lastPrice`);
-    return { fetchedAt: nowSec(), price };
+    return { price, asOf: await usPriceAsOf(nowSec()) };
   });
   return {
     price: got.price,
-    asOf: got.fetchedAt,
+    asOf: got.asOf,
     source: `Backpack consolidated US price (${symbol}, source=External)`,
     sourceUrl: url,
   };
@@ -227,14 +233,34 @@ async function xstocksRef(symbol: string): Promise<Fetched> {
     if (typeof body.quote !== "number" || !Number.isFinite(body.quote) || body.quote <= 0) {
       throw new Error(`xstocks price-data ${symbol}: quote is ${JSON.stringify(body.quote)}`);
     }
-    return { fetchedAt: nowSec(), price: body.quote };
+    return { price: body.quote, asOf: await usPriceAsOf(nowSec()) };
   });
   return {
     price: got.price,
-    asOf: got.fetchedAt,
+    asOf: got.asOf,
     source: `xStocks underlying quote (${symbol})`,
     sourceUrl: url,
   };
+}
+
+async function backpackKlinesRef(symbol: string): Promise<Fetched> {
+  const url = `https://api.backpack.exchange/api/v1/klines?symbol=${encodeURIComponent(symbol)}&interval=1h&startTime=${Math.floor(nowSec() / 3600) * 3600 - KLINES_LOOKBACK_SEC}&source=External`;
+  return cached(`backpack-klines:${symbol}`, BACKPACK_TTL_SEC, async () => {
+    const res = await fetch(url, { next: { revalidate: BACKPACK_TTL_SEC }, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+    if (!res.ok) throw new Error(`backpack klines ${symbol} HTTP ${res.status}`);
+    const bars = await asJson<{ close: string; end: string; trades: string }[]>(res, `backpack klines ${symbol}`);
+    // bars keep coming while the market is closed, flat with no trades; the price dates from the last bar that traded
+    if (!Array.isArray(bars)) throw new Error(`backpack klines ${symbol}: not an array`);
+    const bar = bars.findLast((b) => Number(b.trades) > 0);
+    const price = bar ? Number(bar.close) : NaN;
+    if (!bar || !Number.isFinite(price) || price <= 0) throw new Error(`backpack klines ${symbol}: no traded bar in 4 days`);
+    return {
+      price,
+      asOf: Math.min(nowSec(), Date.parse(`${bar.end.replace(" ", "T")}Z`) / 1000),
+      source: `Backpack consolidated US hourly close (${symbol}, source=External)`,
+      sourceUrl: url,
+    };
+  });
 }
 
 async function pythCoreRef(feedId: string, shard?: number): Promise<Fetched> {
@@ -295,14 +321,15 @@ async function proLatest(proId: number): Promise<{ price: number; asOf: number }
     const price = Number(feed.price) * 10 ** feed.exponent;
     if (!Number.isFinite(price) || price <= 0) throw new Error(`pyth pro feed ${proId}: price ${feed.price}`);
     const us = Number(body.parsed?.timestampUs ?? 0);
-    return { price, asOf: us > 0 ? Math.floor(us / 1e6) : nowSec() };
+    if (!(us > 0)) throw new Error(`pyth pro feed ${proId}: no timestamp`);
+    return { price, asOf: Math.floor(us / 1e6) };
   });
 }
 
 async function pythProRef(proId: number, label: string): Promise<Fetched> {
   const got = await proLatest(proId);
   if (!got) throw new Error(`pyth pro feed ${proId}: no key or not entitled`);
-  return { price: got.price, asOf: got.asOf, source: `${label} (Pyth Pro feed ${proId})`, pythMark: true };
+  return { price: got.price, asOf: await usPriceAsOf(got.asOf), source: `${label} (Pyth Pro feed ${proId})`, pythMark: true };
 }
 
 /** Wrapper-side feeds (Crypto.<SYM>X/USD) and redemption rates (Crypto.<SYM>X/<SYM>.RR). Null without an entitled key. */
@@ -400,6 +427,7 @@ function buildChain(wrapper: Wrapper, company: Company): Candidate[] {
   if (bp) push({ key: `backpack:${bp}`, run: () => backpackRef(bp) });
   const xs = xstocksSymbolFor(company);
   if (xs) push({ key: `xstocks:${xs}`, run: () => xstocksRef(xs) });
+  if (bp) push({ key: `backpack-klines:${bp}`, run: () => backpackKlinesRef(bp) });
 
   return out;
 }
@@ -416,7 +444,7 @@ function finish(f: Fetched, stale: boolean): Reference {
     source: f.source,
     sourceUrl: f.sourceUrl,
     asOf: f.asOf,
-    ageSec: Math.max(0, nowSec() - f.asOf),
+    ageSec: f.asOf === null ? null : Math.max(0, nowSec() - f.asOf),
     stale,
     pythMark: f.pythMark,
   };
@@ -429,17 +457,17 @@ export async function getReference(wrapper: Wrapper, company: Company): Promise<
 
   for (const c of chain) {
     const got = await attempt(c.key, c.run, errors);
-    if (got) return finish(got.value, got.stale);
+    if (got) return finish(got, false);
   }
 
   // Everything in the chain failed this pass: serve the freshest last-good value we hold for it.
   let best: Fetched | undefined;
   for (const c of chain) {
     const good = lastGood.get(c.key);
-    if (good && (!best || good.asOf > best.asOf)) best = good;
+    if (good && (!best || (good.asOf ?? 0) > (best.asOf ?? 0))) best = good;
   }
   if (best) {
-    console.warn(`[reference] ${wrapper.symbol}: all sources failed, serving last good ${nowSec() - best.asOf} s old`);
+    console.warn(`[reference] ${wrapper.symbol}: all sources failed, serving last good${best.asOf === null ? "" : ` ${nowSec() - best.asOf} s old`}`);
     return finish(best, true);
   }
   throw new Error(`reference unavailable for ${wrapper.symbol}: ${errors.join("; ")}`);

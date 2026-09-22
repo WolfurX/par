@@ -23,6 +23,7 @@ const BACKPACK_SESSIONS_URL = "https://api.backpack.exchange/api/v1/market-sessi
 const BACKPACK_HOLIDAYS_URL = "https://api.backpack.exchange/api/v1/market-holidays";
 
 const SCHEDULE_CACHE_TTL_SEC = 3600;
+const FETCH_TIMEOUT_MS = 8000;
 const STALE_RETRY_INTERVAL_SEC = 60;
 const NY_TZ = "America/New_York";
 
@@ -229,7 +230,7 @@ async function fetchRawSchedule(): Promise<RawSchedule> {
   const qs = `?query=${encodeURIComponent(SYMBOL_QUERY)}`;
   for (const base of [PYTH_HISTORY_URL, PYTH_HISTORY_FALLBACK_URL]) {
     try {
-      const res = await fetch(base + qs, { next: { revalidate: SCHEDULE_CACHE_TTL_SEC } });
+      const res = await fetch(base + qs, { next: { revalidate: SCHEDULE_CACHE_TTL_SEC }, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
       if (!res.ok) continue;
       const entry = pickEntry(await res.json());
       if (entry) return entry.market_session_schedule;
@@ -322,6 +323,20 @@ async function fetchBackpackRegularOpen(nowMs: number): Promise<boolean | null> 
 }
 
 // ---- public API ----
+
+/** Latest unix second a US-equity price seen at t can date from: t while any session (pre-market,
+ * regular, post-market, overnight) is running, else the end of the last session before t. */
+export async function usPriceAsOf(t: number): Promise<number | null> {
+  // No schedule means no honest age: the caller prints none rather than failing a healthy source.
+  const schedule = await getSchedule().catch(() => null);
+  if (!schedule) return null;
+  const ms = t * 1000;
+  const { y, mo, d } = nyPartsFromMs(ms);
+  const timeline = buildTimeline(schedule.parsed, y, mo, d, 5, 0);
+  if (timeline.some((iv) => iv.start <= ms && ms < iv.end)) return t;
+  const ended = timeline.filter((iv) => iv.end <= ms).map((iv) => iv.end);
+  return ended.length ? Math.floor(Math.max(...ended) / 1000) : null;
+}
 
 export async function getMarketState(nowSec?: number): Promise<MarketState> {
   const nowMs = (nowSec ?? Math.floor(Date.now() / 1000)) * 1000;

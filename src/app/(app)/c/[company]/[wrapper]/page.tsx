@@ -17,8 +17,8 @@ interface LabelPayload {
   legal: { line: string; transferFeeBps: number; redemption: string; sources: { title: string; url: string; date: string }[] };
   state: { multiplier: number; transferFeeBps: number; paused: boolean; permanentDelegate?: string; freezeAuthority?: string } | null;
   pool: { liquidityUsd: number; volume24hUsd: number; topPool?: { dexId: string; quoteSymbol: string } } | null;
-  reference: { price: number; source: string; sourceUrl?: string; ageSec: number; stale: boolean; pythMark?: boolean } | null;
-  market: { text: string; isOpen: boolean } | null;
+  reference: { price: number; source: string; sourceUrl?: string; ageSec: number | null; stale: boolean; pythMark?: boolean } | null;
+  market: { text: string; isOpen: boolean; session: string } | null;
   pyth: { wrapperFeed: { price: number; asOf: number } | null; redemptionRate: { price: number; asOf: number } | null; index: { price: number; asOf: number } | null };
   size: number;
   feeBps: number;
@@ -40,7 +40,7 @@ interface Receipt { signature: string; receivedRaw?: string; expectedRaw: string
 interface HistoryPayload {
   symbol: string;
   candles: Candle[];
-  reference: { price: number; source: string; ageSec: number } | null;
+  reference: { price: number; source: string; ageSec: number | null } | null;
   pool: { pairAddress: string; dexId: string } | null;
   source: string | null;
   fetchedAt: number;
@@ -192,6 +192,10 @@ export default function LabelPage({
 
   const dash = <span className="muted">-</span>;
   const quoteAge = data ? Math.floor(Date.now() / 1000) - (data.buy?.quotedAt ?? data.generatedAt) : 0;
+  const noRef =
+    data && !data.reference && data.market?.session === "closed" && w.issuer !== "tessera" && w.issuer !== "prestocks"
+      ? "No reference while the US market is closed"
+      : null;
 
   const line1: React.ReactNode = !data ? (
     <>For {fmtUsd(size, 0)} USDC you get {dash} {w.symbol}</>
@@ -208,7 +212,7 @@ export default function LabelPage({
   const line2: React.ReactNode = !data ? (
     dash
   ) : data.row.premium == null ? (
-    "No reference for this token"
+    noRef ?? "No reference for this token"
   ) : (
     <>
       {Math.abs(data.row.premium * 100).toFixed(2)}% {data.row.premium >= 0 ? "above" : "below"} the reference ({fmtUsd(Math.abs(data.row.premiumUsd ?? 0), 0)} USD)
@@ -223,7 +227,7 @@ export default function LabelPage({
       k: "Reference",
       v: data ? (
         <>
-          {data.reference ? <>{fmtUsd(data.reference.price)} USD<span className="detail">{data.reference.source}, {fmtAge(data.reference.ageSec)}{data.reference.stale ? ", from cache" : ""}{data.reference.pythMark ? <span className="pyth-mark">PYTH</span> : null}</span></> : "no reference available"}
+          {data.reference ? <>{fmtUsd(data.reference.price)} USD<span className="detail">{data.reference.source}, {fmtAge(data.reference.ageSec)}{data.reference.stale ? ", from cache" : ""}{data.reference.pythMark ? <span className="pyth-mark">PYTH</span> : null}</span></> : noRef ?? "no reference available"}
           {data.pyth.index ? <span className="detail">Pyth index {fmtUsd(data.pyth.index.price)} USD, 24/7<span className="pyth-mark">PYTH</span></span> : null}
           {data.pyth.wrapperFeed ? <span className="detail">Pyth wrapper feed {fmtUsd(data.pyth.wrapperFeed.price)} USD<span className="pyth-mark">PYTH</span></span> : null}
           {data.pyth.redemptionRate ? <span className="detail">Redemption rate {data.pyth.redemptionRate.price.toFixed(6)} shares per raw token; mint multiplier {m.toFixed(6)}{Math.abs(data.pyth.redemptionRate.price - m) < 1e-5 ? ", agrees" : ", differs"}<span className="pyth-mark">PYTH</span></span> : null}
@@ -239,7 +243,7 @@ export default function LabelPage({
     {
       k: "Premium",
       v: data ? (
-        <>{data.row.premium != null ? <>{fmtPct(data.row.premium)} at this size<span className="detail">{data.row.premiumUsd != null && data.row.premiumUsd > 0 ? `${fmtUsd(data.row.premiumUsd, 0)} USD of your ${fmtUsd(data.size, 0)} is above the reference; at the reference this position is worth ${fmtUsd(data.size - data.row.premiumUsd, 0)} USD.` : data.row.premiumUsd != null ? `The pool is under the reference by ${fmtUsd(-data.row.premiumUsd, 0)} USD at this size.` : ""}</span>{data.row.belowMark ? <span className="detail warn">Below mark: no enforceable redemption at the mark; the discount is not a payout.</span> : null}</> : "no reference"}</>
+        <>{data.row.premium != null ? <>{fmtPct(data.row.premium)} at this size<span className="detail">{data.row.premiumUsd != null && data.row.premiumUsd > 0 ? `${fmtUsd(data.row.premiumUsd, 0)} USD of your ${fmtUsd(data.size, 0)} is above the reference; at the reference this position is worth ${fmtUsd(data.size - data.row.premiumUsd, 0)} USD.` : data.row.premiumUsd != null ? `The pool is under the reference by ${fmtUsd(-data.row.premiumUsd, 0)} USD at this size.` : ""}</span>{data.row.belowMark ? <span className="detail warn">Below mark: no enforceable redemption at the mark; the discount is not a payout.</span> : null}</> : noRef ?? "no reference"}</>
       ) : dash,
     },
     {

@@ -45,7 +45,8 @@ export function fmtPct(fraction: number, digits = 2): string {
 export function fmtUnits(n: number, digits = 4): string {
   return n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: digits });
 }
-export function fmtAge(ageSec: number): string {
+export function fmtAge(ageSec: number | null): string {
+  if (ageSec === null) return "time not published";
   if (ageSec < 90) return `${Math.max(0, Math.round(ageSec))} s old`;
   if (ageSec < 5400) return `${Math.round(ageSec / 60)} min old`;
   if (ageSec < 172800) return `${(ageSec / 3600).toFixed(1)} h old`;

@@ -16,7 +16,7 @@ interface HoldingRow {
   powers: string;
   nextEvent?: { at?: number; text: string; sourceUrl?: string };
 }
-interface SellPanel { unitPrice: number | null; premium: number | null; sellUsdc: number | null; reference: { price: number; source: string; ageSec: number } | null; legalRedemption: string; belowMark: boolean }
+interface SellPanel { unitPrice: number | null; premium: number | null; sellUsdc: number | null; reference: { price: number; source: string; ageSec: number | null } | null; legalRedemption: string; belowMark: boolean }
 
 const issuerName: Record<string, string> = { xstocks: "xStocks (Backed)", ondo: "Ondo", backpack: "Backpack", tessera: "Tessera", prestocks: "PreStocks" };
 const EXAMPLE_OWNER = "D8J5wMyQSfnPohtMdYSz7VEYsH8Uk4DXY5Me8jVc1BsW"; // public holder of OPENAI (PreStocks), the wallet scripts/verify-holdings.mjs reads

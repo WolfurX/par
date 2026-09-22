@@ -11,7 +11,7 @@ interface Row {
   mint: string;
   symbol: string;
   issuer: string;
-  reference: { price: number; source: string; ageSec: number; pythMark?: boolean; stale: boolean } | null;
+  reference: { price: number; source: string; ageSec: number | null; pythMark?: boolean; stale: boolean } | null;
   unitPrice: number | null;
   premium: number | null;
   premiumUsd: number | null;
@@ -169,7 +169,11 @@ export default function CompanyPage({
           {r.unitPrice == null ? (
             noRoute
           ) : r.premium == null ? (
-            "no reference"
+            data.market?.session === "closed" && r.issuer !== "tessera" && r.issuer !== "prestocks" ? (
+              "No reference while the US market is closed"
+            ) : (
+              "no reference"
+            )
           ) : (
             <>
               {fmtPct(r.premium)}

@@ -48,7 +48,14 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
     }),
   );
   const sizedByMint = new Map(ws.map((w, i) => [w.mint, sized[i]]));
-  const refs = await Promise.all(ws.map((w) => getReference(w, company).catch(() => null)));
+  const refs = await Promise.all(
+    ws.map((w) =>
+      getReference(w, company).catch((e) => {
+        console.warn(`[company] ${w.symbol}: ${e instanceof Error ? e.message : String(e)}`);
+        return null;
+      }),
+    ),
+  );
   const index = company.pythIndexProId ? await getPythIndex(company.pythIndexProId).catch(() => null) : null;
 
   const rows = ws.map((w, i) => {

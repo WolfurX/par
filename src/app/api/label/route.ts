@@ -27,7 +27,10 @@ export async function GET(req: Request) {
   const [states, pools, reference, market] = await Promise.all([
     getMintStates([mint]).catch(() => new Map()),
     getPools([mint]).catch(() => new Map()),
-    getReference(w, company).catch(() => null),
+    getReference(w, company).catch((e) => {
+      console.warn(`[label] ${w.symbol}: ${e instanceof Error ? e.message : String(e)}`);
+      return null;
+    }),
     company.kind === "public" ? getMarketState().catch(() => null) : Promise.resolve(null),
   ]);
   const state = states.get(mint) ?? null;

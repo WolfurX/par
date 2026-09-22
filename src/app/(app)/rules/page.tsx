@@ -23,8 +23,13 @@ export default function RulesPage() {
       <h2>Reference and premium</h2>
       <p>
         R is the reference per share for public names (Pyth Core on-chain, then Pyth Pro when entitled, then the Backpack external tape,
-        then the issuer&apos;s price data) and the issuer&apos;s own mark per unit for pre-IPO names (Tessera token details, PreStocks API).
-        The source and its age are printed on every line.
+        then the issuer&apos;s price data, then the last hourly close on the Backpack external tape that had trades) and the
+        issuer&apos;s own mark per unit for pre-IPO names (Tessera token details, PreStocks API), which never falls back to another
+        issuer&apos;s number. A source that fails three times in a row is skipped for 60 s; when every source fails, the freshest last
+        good value is shown, marked as from cache. The source is printed on every line, with the age of the price where the source
+        gives one. Where the source gives no time (the Backpack ticker, the issuer&apos;s price data), the time of our read stands in
+        while a US session is open, and the end of the last session when the market is closed; Pyth Pro equity times are capped the same way. Tessera and PreStocks publish no time
+        for their marks, so none is printed.
       </p>
       <p className="mono small">
         buy: P<sub>raw</sub> = (S − S·f) ÷ out<sub>raw</sub>; P<sub>unit</sub> = P<sub>raw</sub> ÷ m

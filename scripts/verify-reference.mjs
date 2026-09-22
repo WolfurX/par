@@ -92,8 +92,8 @@ for (const t of targets) {
     console.log(`  source:    ${r.source}`);
     console.log(`  served by: ${servedBy}${servedBy === chain[0] ? "" : "   <- fell back"}`);
     console.log(`  sourceUrl: ${r.sourceUrl ?? "(none: key-gated feed)"}`);
-    console.log(`  asOf:      ${r.asOf} = ${iso(r.asOf)}`);
-    console.log(`  age:       ${r.ageSec} s (${fmtAge(r.ageSec)})`);
+    console.log(`  asOf:      ${r.asOf === null ? "not published" : `${r.asOf} = ${iso(r.asOf)}`}`);
+    console.log(`  age:       ${fmtAge(r.ageSec)}${r.ageSec === null ? "" : ` (${r.ageSec} s)`}`);
     console.log(`  stale:     ${r.stale}    pythMark: ${r.pythMark === true}`);
     console.log(`  took:      ${Date.now() - start} ms`);
   } catch (e) {
@@ -107,7 +107,8 @@ function sourceMatchesKey(source, key) {
   const [kind, arg] = key.split(":");
   if (kind === "pyth-core") return source.startsWith("Pyth Core");
   if (kind === "pyth-pro") return source.includes(`Pyth Pro feed ${arg}`);
-  if (kind === "backpack") return source.includes(arg);
+  if (kind === "backpack") return source.startsWith("Backpack consolidated US price") && source.includes(arg);
+  if (kind === "backpack-klines") return source.includes("hourly close") && source.includes(arg);
   if (kind === "tessera") return source.startsWith("Tessera") && source.includes(arg);
   if (kind === "prestocks") return source.startsWith("PreStocks") && source.includes(arg);
   if (kind === "xstocks") return source.startsWith("xStocks") && source.includes(arg);
@@ -197,8 +198,8 @@ const t0 = Date.now();
 const w = bySymbol("tOpenAI");
 try {
   const again = await getReference(w, companyById.get(w.companyId));
-  console.log(`  second tOpenAI read: ${Date.now() - t0} ms, age now ${again.ageSec} s, stale ${again.stale}`);
-  console.log("  (age grows while the memo holds; a new upstream call only happens after the TTL)");
+  console.log(`  second tOpenAI read: ${Date.now() - t0} ms, age now ${again.ageSec == null ? "not published" : again.ageSec + " s"}, stale ${again.stale}`);
+  console.log("  (a new upstream call only happens after the TTL; Tessera publishes no time, so its age is not printed)");
 } catch (e) {
   console.log(`  second tOpenAI read: ${e.message}`);
   console.log("  (the first read failed too, so there is no last-good value to serve; Tessera returns 500 on about one call in seven)");
