@@ -4,6 +4,7 @@ import { legalFor, companyNotes } from "@/lib/legal";
 import { getMintStates } from "@/lib/rpc";
 import { getReference, getPythProPrice, getPythIndex } from "@/lib/reference";
 import { getPools } from "@/lib/pools";
+import { getMids } from "@/lib/jupprice";
 import { getQuote } from "@/lib/jupiter";
 import { getMarketState, describeMarketState } from "@/lib/sessions";
 import { computeRow } from "@/lib/ranking";
@@ -24,7 +25,7 @@ export async function GET(req: Request) {
   const company = companyById.get(w.companyId)!;
   const legal = legalFor(w.issuer, w.legalId);
 
-  const [states, pools, reference, market] = await Promise.all([
+  const [states, pools, reference, market, mids] = await Promise.all([
     getMintStates([mint]).catch(() => new Map()),
     getPools([mint]).catch(() => new Map()),
     getReference(w, company).catch((e) => {
@@ -32,6 +33,7 @@ export async function GET(req: Request) {
       return null;
     }),
     company.kind === "public" ? getMarketState().catch(() => null) : Promise.resolve(null),
+    getMids([mint]).catch(() => new Map()),
   ]);
   const state = states.get(mint) ?? null;
   const pool = pools.get(mint) ?? null;
@@ -57,7 +59,7 @@ export async function GET(req: Request) {
     company.pythIndexProId ? getPythIndex(company.pythIndexProId).catch(() => null) : Promise.resolve(null),
   ]);
 
-  const row = computeRow({ wrapper: w, legal, reference, state, pool, buy, sell, sizeUsdc: size, feeBps: FEE_BPS });
+  const row = computeRow({ wrapper: w, legal, reference, state, pool, buy, sell, sizeUsdc: size, feeBps: FEE_BPS, mid: mids.get(mint)?.usdPricePerUnit ?? null });
 
   return NextResponse.json({
     wrapper: w,

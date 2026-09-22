@@ -1,5 +1,5 @@
 // Jupiter Price v3: one call per company for row mids (usdPrice is per scaled unit; scaledUiConfig is attached).
-// Used only for company-page mids. The label page quotes at size through jupiter.ts.
+// Mids for the company page and for impact on both screens; sized prices come from jupiter.ts.
 
 export interface JupMid {
   mint: string;
@@ -25,7 +25,7 @@ export async function getMids(mints: string[]): Promise<Map<string, JupMid>> {
   if (process.env.JUPITER_API_KEY) headers["x-api-key"] = process.env.JUPITER_API_KEY;
   const out = new Map<string, JupMid>();
   try {
-    const res = await fetch(`${base()}?ids=${mints.join(",")}`, { headers, next: { revalidate: 30 } });
+    const res = await fetch(`${base()}?ids=${mints.join(",")}`, { headers, cache: "no-store" });
     if (res.ok) {
       const data = (await res.json()) as Record<string, Record<string, unknown>>;
       for (const mint of mints) {

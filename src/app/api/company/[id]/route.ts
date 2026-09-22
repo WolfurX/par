@@ -70,6 +70,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
       sell: sized[i].sell,
       sizeUsdc: size,
       feeBps: FEE_BPS,
+      mid: mids.get(w.mint)?.usdPricePerUnit ?? null,
     });
     return computed;
   });

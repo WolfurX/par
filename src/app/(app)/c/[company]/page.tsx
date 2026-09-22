@@ -24,6 +24,7 @@ interface Row {
   quotedAt: number | null;
   liquidityUsd: number;
   volume24hUsd: number;
+  belowMark: boolean;
   form: string;
   redemption: string;
 }
@@ -178,6 +179,7 @@ export default function CompanyPage({
             <>
               {fmtPct(r.premium)}
               <span className="detail">{fmtUsd(Math.abs(r.premiumUsd ?? 0), 0)} USD at this size</span>
+              {r.belowMark ? <span className="detail warn">below mark, not a payout</span> : null}
             </>
           )}
         </span>
@@ -187,7 +189,7 @@ export default function CompanyPage({
       k: "Impact",
       cell: (r) => (
         <span className="fade" key={r.quotedAt ?? 0}>
-          {r.unitPrice == null ? noRoute : `${((r.impact ?? 0) * 100).toFixed(2)}%`}
+          {r.unitPrice == null ? noRoute : r.impact == null ? <span className="muted">n/a</span> : `${(r.impact * 100).toFixed(2)}%`}
         </span>
       ),
     },

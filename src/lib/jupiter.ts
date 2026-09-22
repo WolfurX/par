@@ -628,13 +628,19 @@ const sizedQuotes = new Map<string, { at: number; value: QuoteResult }>();
  * the USDC leg (reported as feeBps, 10 bps on the pairs checked 2026-09-20), which is what FEE_BPS also assumes.
  */
 export async function quoteAtSize(mint: string, side: Side, amountRaw: string): Promise<QuoteResult | null> {
-  const key = `${mint}:${side}:${amountRaw}`;
+  const exclude = excludedDexesFor(mint);
+  const key = `${mint}:${side}:${amountRaw}:${exclude.join(",")}`;
   const hit = sizedQuotes.get(key);
   if (hit && Date.now() - hit.at < SIZED_TTL_MS) return hit.value;
   const { inputMint, outputMint } = mintsFor(mint, side);
+  // /order honours excludeDexes on its Metis routes (live 2026-09-23: excludeDexes=Manifest took Manifest out of
+  // the PreStocks OPENAI route). It can also return a non-Metis router (OKX DEX Router, seen 2026-09-23 on OPENAI
+  // at 1,000 USDC with excludeDexes=Manifest); that route is one opaque leg excludeDexes does not reach.
+  const q = new URLSearchParams({ inputMint, outputMint, amount: amountRaw });
+  if (exclude.length) q.set("excludeDexes", exclude.join(","));
   const r = await jupGet<{ outAmount?: string; otherAmountThreshold?: string; priceImpactPct?: string; slippageBps?: number; feeBps?: number; routePlan?: RoutePlanLeg[] }>(
     "/order",
-    new URLSearchParams({ inputMint, outputMint, amount: amountRaw }),
+    q,
   );
   const b = r.body;
   if (r.status !== 200 || !b.outAmount) return null;
@@ -652,7 +658,7 @@ export async function quoteAtSize(mint: string, side: Side, amountRaw: string): 
     feeBps: Number(b.feeBps ?? 0),
     feeAmountRaw: feeEstimate(side, amountRaw, b.outAmount).toString(),
     routeLabels: (b.routePlan ?? []).map((l) => l.swapInfo.label),
-    excludedDexes: [],
+    excludedDexes: exclude,
     quotedAt: Math.floor(Date.now() / 1000),
   };
   sizedQuotes.set(key, { at: Date.now(), value });

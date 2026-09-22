@@ -23,7 +23,6 @@ interface LabelPayload {
   size: number;
   feeBps: number;
   buy: { expectedRaw: string; minimumRaw: string; slippageBps: number; routeLabels: string[]; deliveryRatio?: number; quotedAt: number; simulatedOutRaw?: string } | null;
-  sell: { expectedRaw: string; priceImpactPct: number } | null;
   quoteError: string | null;
   row: {
     unitPrice: number | null; rawPrice: number | null; multiplier: number; premium: number | null; premiumUsd: number | null; impact: number | null;
@@ -196,9 +195,12 @@ export default function LabelPage({
     data && !data.reference && data.market?.session === "closed" && w.issuer !== "tessera" && w.issuer !== "prestocks"
       ? "No reference while the US market is closed"
       : null;
+  const noPool = data?.row.noLiquidity === true;
 
   const line1: React.ReactNode = !data ? (
     <>For {fmtUsd(size, 0)} USDC you get {dash} {w.symbol}</>
+  ) : noPool ? (
+    <>No on-chain pool for {w.symbol}</>
   ) : side === "buy" ? (
     <>
       For {fmtUsd(data.size, 0)} USDC you get {data.row.expectedUnits != null ? <span className="amt fade" key={data.buy?.quotedAt ?? data.generatedAt}>{fmtUnits(data.row.expectedUnits)}</span> : dash} {w.symbol}
@@ -212,7 +214,18 @@ export default function LabelPage({
   const line2: React.ReactNode = !data ? (
     dash
   ) : data.row.premium == null ? (
-    noRef ?? "No reference for this token"
+    data.reference ? (
+      <>
+        Reference {fmtUsd(data.reference.price)} USD{" "}
+        <span className="small muted">
+          {data.reference.source}, {fmtAge(data.reference.ageSec)}
+          {data.reference.stale ? ", from cache" : ""}
+        </span>
+        {data.reference.pythMark ? <span className="pyth-mark">PYTH</span> : null}
+      </>
+    ) : (
+      noRef ?? "No reference for this token"
+    )
   ) : (
     <>
       {Math.abs(data.row.premium * 100).toFixed(2)}% {data.row.premium >= 0 ? "above" : "below"} the reference ({fmtUsd(Math.abs(data.row.premiumUsd ?? 0), 0)} USD)
@@ -281,7 +294,7 @@ export default function LabelPage({
     {
       k: "Fees out",
       v: data ? (
-        <>If sold now: Parsec {data.feeBps / 100}%{data.legal.transferFeeBps ? `, ${issuerName[w.issuer]} ${data.legal.transferFeeBps / 100}%` : ""}{data.sell ? `, impact ${(data.sell.priceImpactPct * 100).toFixed(2)}%` : ""}.</>
+        <>If sold now: Parsec {data.feeBps / 100}%{data.legal.transferFeeBps ? `, ${issuerName[w.issuer]} ${data.legal.transferFeeBps / 100}%` : ""}.</>
       ) : dash,
     },
     {
@@ -325,7 +338,7 @@ export default function LabelPage({
 
       <p className="sum">{line1}</p>
       <p className="sum">{line2}</p>
-      <p className="sum">{line3}</p>
+      {noPool ? null : <p className="sum">{line3}</p>}
 
       <div className="controls">
         <button onClick={buildAndSign} disabled={!connected || !data || data.row.noLiquidity}>Build swap, sign in wallet</button>

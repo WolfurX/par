@@ -39,6 +39,15 @@ export default function RulesPage() {
         premium = P<sub>unit</sub> ÷ R − 1, at the entered size S, size printed
         <br />
         money line = S − S ÷ (1 + premium)
+        <br />
+        impact = max(0, P<sub>unit</sub> × (1 − t) ÷ mid − 1), at the entered size S
+      </p>
+      <p>
+        Impact compares the unit price paid at size with mid, Jupiter&apos;s price per unit for the same token. t is
+        the issuer&apos;s transfer fee (Tessera 0.2%, PreStocks 1%, others 0), which Jupiter&apos;s
+        quote already includes and which is listed under fees in, so it is taken out first. Impact is never below 0
+        and is not shown when either price is missing; above 5% the row is marked thin. The sell side is in the
+        round trip.
       </p>
 
       <h2>Expected and minimum</h2>

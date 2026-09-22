@@ -23,6 +23,8 @@ export interface RowInput {
   /** USDC size the quotes were taken at. */
   sizeUsdc: number;
   feeBps: number;
+  /** Jupiter Price v3 mid per displayed unit, for impact. */
+  mid: number | null;
 }
 
 export interface RowComputed {
@@ -36,7 +38,7 @@ export interface RowComputed {
   reference: Reference | null;
   premium: number | null; // fraction
   premiumUsd: number | null; // S - S/(1+premium)
-  impact: number | null; // fraction
+  impact: number | null; // fraction: unit price net of the issuer transfer fee over mid, minus 1, floored at 0
   expectedUnits: number | null;
   minimumUnits: number | null;
   feesInBps: number; // app + issuer transfer fee withheld on the pool leg
@@ -70,7 +72,6 @@ export function computeRow(i: RowInput): RowComputed {
   let unitPrice: number | null = null;
   let expectedUnits: number | null = null;
   let minimumUnits: number | null = null;
-  let impact: number | null = null;
   let routeLabels: string[] = [];
   let deliveryRatio: number | null = null;
 
@@ -82,7 +83,6 @@ export function computeRow(i: RowInput): RowComputed {
     }
     expectedUnits = rawToUnits(i.buy.expectedRaw, dec, m);
     minimumUnits = rawToUnits(i.buy.minimumRaw, dec, m);
-    impact = i.buy.priceImpactPct;
     routeLabels = i.buy.routeLabels;
     deliveryRatio = i.buy.deliveryRatio ?? null;
   }
@@ -92,6 +92,7 @@ export function computeRow(i: RowInput): RowComputed {
   const premiumUsd = premium != null ? S - S / (1 + premium) : null;
 
   const transferFeeBps = i.state?.transferFeeBps ?? i.legal.transferFeeBps;
+  const impact = unitPrice != null && i.mid != null ? Math.max(0, (unitPrice * (1 - transferFeeBps / 10_000)) / i.mid - 1) : null;
   const feesInBps = i.feeBps + transferFeeBps;
   const feesOutBps = i.feeBps + transferFeeBps;
 
