@@ -20,6 +20,9 @@ export const companies: Company[] = [
   { id: "spy", name: "SPDR S&P 500 ETF", ticker: "SPY", kind: "public", pythEquityFeedId: "19e09bb805456ada3979a7d1cbb4b6d63babc3a0f8e8a9509f68afa5c4c11cd5", pythEquityProId: 1398 },
   { id: "mu", name: "Micron", ticker: "MU", kind: "public", pythEquityFeedId: "152244dc24665ca7dd3f257b8f442dc449b6346f48235b7b229268cb770dda2d", pythEquityProId: 1298 },
   { id: "spcx", name: "SpaceX", ticker: "SPCX", kind: "public", pythEquityProId: 3314 }, // listed June 2026; no Core account on shards 0 to 20 (checked 2026-09-16)
+  { id: "fwdi", name: "Forward Industries", ticker: "FWDI", kind: "public" },
+  { id: "djt", name: "Trump Media", ticker: "DJT", kind: "public" },
+  { id: "bot", name: "RoboStrategy", ticker: "BOT", kind: "public" },
   { id: "openai", name: "OpenAI", kind: "private", pythIndexProId: 3619 },
   { id: "kalshi", name: "Kalshi", kind: "private" },
   { id: "anthropic", name: "Anthropic", kind: "private", pythIndexProId: 3618 }, // coming_soon on 2026-09-16
@@ -51,6 +54,9 @@ export const wrappers: Wrapper[] = [
   { mint: "TSLAqBbv4CNCnzWFeB7LmydAyEiNMJtve7DYKLpdK4S", issuer: "backpack", symbol: "TSLA.US", name: "Tesla, Inc. - Backpack Securities", decimals: 6, companyId: "tsla", reference: { kind: "pyth-core", feedId: "16dad506d7db8da01c87581c87ca897a012a153557d4d578c3b9c9e1bc0632f1" } },
   { mint: "NVDAVuiB7hwd3m5Wa1JuHNovPaPG6BH1QNztbKFxNjv", issuer: "backpack", symbol: "NVDA.US", name: "NVIDIA Corporation - Backpack Securities", decimals: 6, companyId: "nvda", reference: { kind: "pyth-core", feedId: "b1073854ed24cbc755dc527418f52b7d271f6cc967bbf8d8129112b18860a593" } },
   { mint: "SPYBo66VJPFjh1pXMb9Le53kDYWTK1zzYVDeVRWtsbi", issuer: "backpack", symbol: "SPY.US", name: "State Street SPDR S&P 500 ETF Trust - Backpack Securities", decimals: 6, companyId: "spy", reference: { kind: "pyth-core", feedId: "19e09bb805456ada3979a7d1cbb4b6d63babc3a0f8e8a9509f68afa5c4c11cd5" } }, // mint from api.backpack.exchange/api/v1/assets, verified on-chain 2026-09-19; deposit/withdraw disabled
+  { mint: "FWDtiB5fXHdVAewPqvHPL2dh4aBC1C6GacQbePoQXKjz", issuer: "backpack", symbol: "FWDI.US", name: "Forward Industries, Inc. - Backpack Securities", decimals: 6, companyId: "fwdi", reference: { kind: "backpack-external", symbol: "FWDI.US_USDC" } }, // mint from api.backpack.exchange/api/v1/assets, verified on-chain 2026-09-23; no Pyth Core account on shard 1 (shard 0 last published 2026-07-22)
+  { mint: "DJTu7vi8norVzdVAffgvb39VP7wjKeTsgaMBJrzfxvoF", issuer: "backpack", symbol: "DJT.US", name: "Trump Media & Technology Group Corp. Common Stock - Backpack Securities", decimals: 6, companyId: "djt", reference: { kind: "backpack-external", symbol: "DJT.US_USDC" } }, // mint from api.backpack.exchange/api/v1/assets, verified on-chain 2026-09-23; no Pyth Core account on shard 1
+  { mint: "BoTx8y9ynfdxf5ZjWtCoBVkff52qKA82ysaLU8ZM6d8T", issuer: "backpack", symbol: "BOT.US", name: "RoboStrategy - Backpack Securities", decimals: 6, companyId: "bot", reference: { kind: "backpack-external", symbol: "BOT.US_USDC" } }, // mint from api.backpack.exchange/api/v1/assets, verified on-chain 2026-09-23; no Pyth Core account on shard 1
 
   // Tessera T-Tokens: Token-2022, 9 decimals, 20 bps transfer fee, no hook, no delegate
   { mint: "oPAiAikWTaFj9RYoRFD35ccfwhnMcB3ThgBZRHSkjTZ", issuer: "tessera", symbol: "tOpenAI", name: "T-OpenAI", decimals: 9, companyId: "openai", reference: { kind: "tessera", code: "tOpenAI" } },
