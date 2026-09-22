@@ -6,7 +6,7 @@ const archivo = Archivo({ subsets: ["latin"], weight: ["500", "700", "800"], var
 const plexMono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-plex-mono", display: "swap" });
 
 const description =
-  "Every on-chain way to own a company on Solana, public or pre-IPO, on one label: each issuer's own reference price, round-trip cost at your size, and what the token legally is.";
+  "A company's tokens on Solana, public or pre-IPO, side by side at your size: the premium to each token's reference, the round-trip cost, and what the token legally is.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://par-dun.vercel.app"),

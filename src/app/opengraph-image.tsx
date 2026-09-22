@@ -12,7 +12,7 @@ export default function Image() {
           <div style={{ display: "flex", fontSize: 28, letterSpacing: 8, color: "#15181b" }}>PARSEC</div>
           <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", flexGrow: 1 }}>
             <div style={{ display: "flex", fontSize: 64, lineHeight: 1.15, color: "#15181b" }}>
-              Every on-chain way to own a company, on one label.
+              A company's tokens on Solana, side by side at your size.
             </div>
             <div style={{ display: "flex", fontSize: 30, color: "#6b7078", marginTop: 28 }}>
               Same stock, different prices. Compare them before you sign.

@@ -7,8 +7,8 @@ export default function AboutPage() {
     <main>
       <h1>What Parsec is</h1>
       <p>
-        Every on-chain way to own a company on Solana, public or pre-IPO, on one label: each issuer&apos;s own reference price, the full
-        round-trip cost at your size with Parsec&apos;s fee printed, and a plain statement of what the token legally is, before you sign in your
+        A company&apos;s tokens on Solana, public or pre-IPO, side by side at your size: the premium to each token&apos;s reference, the full
+        round-trip cost with Parsec&apos;s fee printed, and a plain statement of what the token legally is, before you sign in your
         own wallet. Nothing here is a recommendation. Parsec shows facts; you decide.
       </p>
 
@@ -67,7 +67,7 @@ export default function AboutPage() {
       <h2>Built for Stocklana</h2>
       <p>
         Parsec was built during the Stocklana hackathon (Solana Foundation, September 2026). Third-party components: Jupiter Swap API, Pyth
-        price feeds, Helius RPC and DAS, DexScreener, the Tessera referral program (on-chain IDL), and the public APIs of Backed, Ondo,
+        price feeds, Helius RPC and DAS, DexScreener, the Tessera referral program (on-chain IDL), and the public APIs of Backed,
         Backpack, Tessera and PreStocks.
       </p>
     </main>

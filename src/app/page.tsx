@@ -18,7 +18,7 @@ export default function LandingPage() {
             <div className="landing-wrap">
               <div className="landing-hero-in">
                 <p className="landing-eyebrow">Parallax</p>
-                <h1>Every on-chain way to own a company, on one label.</h1>
+                <h1>A company&apos;s tokens on Solana, side by side at your size.</h1>
                 <p className="landing-sub">Same stock, different prices. Compare them before you sign.</p>
               </div>
             </div>
@@ -31,6 +31,18 @@ export default function LandingPage() {
                 <div className="landing-step">Find every wrapper of a company.</div>
                 <div className="landing-step">Compare them at your size.</div>
                 <div className="landing-step">Sign in your own wallet.</div>
+              </div>
+            </div>
+          </section>
+
+          <section className="landing-how">
+            <div className="landing-wrap">
+              <p className="landing-kicker">What it shows</p>
+              <div className="landing-steps">
+                <div className="landing-step">Pre-IPO tokens against their issuer&apos;s own mark, including Tessera&apos;s tOpenAI, tKalshi and tSpaceX.</div>
+                <div className="landing-step">The round trip at your size, with every fee on its own line.</div>
+                <div className="landing-step">What each token legally is, and who can freeze or move it.</div>
+                <div className="landing-step">Every token pinned by mint address, so look-alikes stay out.</div>
               </div>
             </div>
           </section>

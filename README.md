@@ -1,6 +1,6 @@
 # Parsec
 
-Every on-chain way to own a company on Solana, public or pre-IPO, on one label: each issuer's own reference price, the round-trip cost at your size with the fee printed, and what the token legally is, before you sign in your own wallet. No AI. The user decides.
+A company's tokens on Solana, public or pre-IPO, side by side at your size: the premium to each token's reference, the round-trip cost with the fee printed, and what the token legally is, before you sign in your own wallet. No AI. The user decides.
 
 Built for the Stocklana hackathon (Solana Foundation, September 2026).
 
@@ -27,7 +27,7 @@ Verification scripts under `scripts/` hit live APIs and mainnet simulation; noth
 
 ## Third-party components
 
-Jupiter Swap API (Metis routing; "Powered by Jupiter"), Pyth price feeds (Core on-chain accounts and Pro feeds), Helius RPC and DAS, DexScreener, the Tessera referral program (on-chain IDL pinned in `src/lib/idl`), and the public APIs of Backed (xStocks), Ondo, Backpack, Tessera and PreStocks. Issuer documents are linked from the About page.
+Jupiter Swap API (Metis routing; "Powered by Jupiter"), Pyth price feeds (Core on-chain accounts and Pro feeds), Helius RPC and DAS, DexScreener, the Tessera referral program (on-chain IDL pinned in `src/lib/idl`), and the public APIs of Backed (xStocks), Backpack, Tessera and PreStocks. Issuer documents are linked from the About page.
 
 ## Not advice
 

@@ -12,7 +12,7 @@ export default function Home() {
   }, [q]);
   return (
     <main>
-      <h1>Every on-chain way to own a company, on one label.</h1>
+      <h1>A company&apos;s tokens on Solana, side by side at your size.</h1>
       <div className="controls">
         <input aria-label="Search companies" placeholder="Search a company or ticker" value={q} onChange={(e) => setQ(e.target.value)} style={{ minWidth: "18em" }} />
       </div>
