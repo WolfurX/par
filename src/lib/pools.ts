@@ -49,10 +49,10 @@ async function fetchDexScreener(mint: string): Promise<PoolInfo> {
   const res = await fetch(`${dexScreenerBase()}/${mint}`, { next: { revalidate: CACHE_TTL_SEC } });
   if (!res.ok) throw new Error(`DexScreener ${res.status} for ${mint}`);
   const pairs = (await res.json()) as DexScreenerPair[] | null;
-  if (!Array.isArray(pairs) || pairs.length === 0) return emptyPool(mint);
+  if (!Array.isArray(pairs) || pairs.length === 0) return { ...emptyPool(mint), noPair: true };
 
   const ours = pairs.filter((p) => p.baseToken?.address === mint);
-  if (ours.length === 0) return emptyPool(mint);
+  if (ours.length === 0) return { ...emptyPool(mint), noPair: true };
 
   let liquidityUsd = 0;
   let volume24hUsd = 0;

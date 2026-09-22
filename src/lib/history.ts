@@ -32,8 +32,8 @@ export type HistoryRange = "7d" | "30d";
 
 export interface History {
   candles: Candle[];
-  pool: { pairAddress: string; dexId: string };
-  source: "geckoterminal" | "jupiter";
+  pool: { pairAddress: string; dexId: string } | null;
+  source: "geckoterminal" | "jupiter" | null;
   fetchedAt: number; // unix seconds
 }
 
@@ -111,7 +111,9 @@ export async function getHistory(mint: string, range: HistoryRange = "7d"): Prom
 
   const cfg = RANGES[range];
   const [pools, states] = await Promise.all([getPools([mint]), getMintStates([mint])]);
-  const top = pools.get(mint)?.topPool;
+  const info = pools.get(mint);
+  if (info?.noPair) return { candles: [], pool: null, source: null, fetchedAt: Math.floor(Date.now() / 1000) }; // no pool (Backpack AAPL.US, SPY.US): no history, not an upstream failure
+  const top = info?.topPool;
   if (!top) throw new Error(`history: no DexScreener pool for ${mint}`);
   const m = states.get(mint)?.multiplier ?? 1;
   const pool = { pairAddress: top.pairAddress, dexId: top.dexId };

@@ -160,8 +160,8 @@ for (const t of TARGETS) {
   }
 }
 
-// Force a Manifest route on PreStocks OPENAI: Manifest's adapter ignores the 50 bps transfer fee, so the wallet
-// receives 0.995x the quote. The module must measure it, exclude Manifest for the mint, and say so.
+// Force a Manifest route on PreStocks OPENAI. Manifest's adapter ignores the transfer fee, so the module must decline
+// it: measure the short-pay and exclude Manifest for the mint, report the simulation revert, or find no route.
 {
   const pre = TARGETS[1];
   console.log(`\n== FORCED dexes=Manifest on ${pre.name} (short-pay check)`);
@@ -170,11 +170,11 @@ for (const t of TARGETS) {
     printQuote(`BUY ${pre.name} via Manifest only`, forced, 9);
     const ratio = forced.deliveryRatio;
     const excluded = excludedDexesFor(pre.mint);
-    const caught = (ratio !== undefined && ratio < 0.999 && excluded.includes("Manifest")) || (!forced.simulationRan && forced.reason?.includes("Manifest"));
-    check(`Manifest short-pay caught (ratio ${ratio === undefined ? "n/a" : ratio.toFixed(6)}; excluded now [${excluded.join(", ")}])`, caught, forced.reason);
+    const caught = (ratio !== undefined && ratio < 0.999 && excluded.includes("Manifest")) || (!forced.simulationRan && forced.reason?.startsWith("no route simulated"));
+    check(`Manifest declined (ratio ${ratio === undefined ? "n/a" : ratio.toFixed(6)}; excluded now [${excluded.join(", ")}])`, caught, forced.reason);
     if (forced.simulationRan) check(`Manifest delivered about 0.995x`, ratio > 0.99 && ratio < 0.999, ratio.toFixed(6));
   } catch (e) {
-    check(`Manifest forced quote (400 "No routes found" means Manifest has no PreStocks book right now)`, false, e.message);
+    check(`Manifest declined: no route`, /No routes found/.test(e.message), e.message);
   }
 }
 

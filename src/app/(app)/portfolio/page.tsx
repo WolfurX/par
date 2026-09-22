@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { companyById } from "@/lib/registry";
 import { fmtAge, fmtPct, fmtUnits, fmtUsd } from "@/lib/units";
@@ -19,11 +19,13 @@ interface HoldingRow {
 interface SellPanel { unitPrice: number | null; premium: number | null; sellUsdc: number | null; reference: { price: number; source: string; ageSec: number } | null; legalRedemption: string; belowMark: boolean }
 
 const issuerName: Record<string, string> = { xstocks: "xStocks (Backed)", ondo: "Ondo", backpack: "Backpack", tessera: "Tessera", prestocks: "PreStocks" };
+const EXAMPLE_OWNER = "D8J5wMyQSfnPohtMdYSz7VEYsH8Uk4DXY5Me8jVc1BsW"; // public holder of OPENAI (PreStocks), the wallet scripts/verify-holdings.mjs reads
 
-export default function PortfolioPage() {
+export default function PortfolioPage({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
+  const sp = use(searchParams);
   const { publicKey } = useWallet();
   const [addr, setAddr] = useState("");
-  const [owner, setOwner] = useState<string | null>(null);
+  const [owner, setOwner] = useState<string | null>(() => (typeof sp.owner === "string" ? sp.owner : null));
   const [rows, setRows] = useState<HoldingRow[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [panels, setPanels] = useState<Record<string, SellPanel | "loading">>({});
@@ -34,10 +36,11 @@ export default function PortfolioPage() {
 
   useEffect(() => {
     if (!owner) return;
+    window.history.replaceState(null, "", `?owner=${encodeURIComponent(owner)}`);
     setRows(null);
     setErr(null);
     setPanels({});
-    fetch(`/api/holdings?owner=${owner}`)
+    fetch(`/api/holdings?owner=${encodeURIComponent(owner)}`)
       .then(async (r) => {
         if (!r.ok) throw new Error((await r.json()).error ?? r.statusText);
         return r.json();
@@ -79,7 +82,7 @@ export default function PortfolioPage() {
         <input aria-label="Wallet address" placeholder="Paste a Solana address" value={addr} onChange={(e) => setAddr(e.target.value)} style={{ flex: "1 1 18em", minWidth: 0, maxWidth: "100%" }} />
         <button className="secondary" onClick={() => addr.trim() && setOwner(addr.trim())}>Read</button>
       </div>
-      {owner ? <p className="small mono muted">{owner}</p> : null}
+      {owner ? <p className="small mono muted">{owner}</p> : <p className="small muted">Example: <a className="mono" href={`?owner=${EXAMPLE_OWNER}`} onClick={(e) => { e.preventDefault(); setOwner(EXAMPLE_OWNER); }}>{EXAMPLE_OWNER}</a></p>}
       {err ? <p className="warn">{err}</p> : null}
       {owner && !rows && !err ? <p className="muted">Reading token accounts and mint state.</p> : null}
       {rows && rows.length === 0 ? <p className="muted">No tokenized-stock wrappers in this wallet.</p> : null}

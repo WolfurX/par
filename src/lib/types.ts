@@ -88,6 +88,7 @@ export interface PoolInfo {
   volume24hUsd: number;
   topPool?: { dexId: string; pairAddress: string; quoteSymbol: string; liquidityUsd: number; priceUsdRaw: number }; // USD per raw token, as DexScreener reports it
   fetchedAt: number;
+  noPair?: boolean; // DexScreener answered and lists no pair with this mint as base token
 }
 
 export type Side = "buy" | "sell";

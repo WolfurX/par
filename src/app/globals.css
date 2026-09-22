@@ -55,6 +55,7 @@ td { border-bottom: 1px solid var(--rule); padding: 7px 10px 7px 0; vertical-ali
 tr:last-child td { border-bottom: 1px solid var(--rule-strong); }
 td.num, th.num { text-align: right; padding-right: 0; }
 .tbl { overflow-x: auto; }
+.tbl.more { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); }
 
 .strip { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; border: 1px solid var(--rule-strong); padding: 10px; margin: 12px 0 16px; }
 .cols { display: grid; grid-template-columns: 1fr; gap: 18px; align-items: start; margin: 12px 0 6px; }

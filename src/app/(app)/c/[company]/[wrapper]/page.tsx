@@ -41,8 +41,8 @@ interface HistoryPayload {
   symbol: string;
   candles: Candle[];
   reference: { price: number; source: string; ageSec: number } | null;
-  pool: { pairAddress: string; dexId: string };
-  source: string;
+  pool: { pairAddress: string; dexId: string } | null;
+  source: string | null;
   fetchedAt: number;
 }
 
@@ -330,12 +330,12 @@ export default function LabelPage({
       {status ? <p className="small">{status}</p> : null}
 
       {history === null ? null : history.candles.length === 0 ? (
-        <p className="small muted">No price history for this pool yet.</p>
+        <p className="small muted">No price history.</p>
       ) : (
         <div className="chart">
           <PriceChart symbol={history.symbol} candles={history.candles} reference={history.reference?.price ?? null} range={hrange} onRange={setHrange} />
           <p className="small muted">
-            Pool price from {history.pool.dexId} via {history.source === "geckoterminal" ? "GeckoTerminal" : "Jupiter"}, {fmtAge(Math.floor(Date.now() / 1000) - history.fetchedAt)}
+            Pool price from {history.pool!.dexId} via {history.source === "geckoterminal" ? "GeckoTerminal" : "Jupiter"}, {fmtAge(Math.floor(Date.now() / 1000) - history.fetchedAt)}
             {history.reference ? <>. Reference {history.reference.source}, {fmtAge(history.reference.ageSec)}</> : null}
           </p>
         </div>

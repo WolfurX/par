@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, use, useEffect, useState } from "react";
+import { Fragment, use, useEffect, useRef, useState } from "react";
 import { INTENTS, type Intent } from "@/lib/ranking";
 import { fmtAge, fmtPct, fmtUsd } from "@/lib/units";
 import type { Candle } from "@/lib/history";
@@ -56,6 +56,8 @@ export default function CompanyPage({
   const [data, setData] = useState<Payload | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [spark, setSpark] = useState<Record<string, number[]>>({});
+  const tbl = useRef<HTMLDivElement>(null);
+  const [more, setMore] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -87,6 +89,19 @@ export default function CompanyPage({
       alive = false;
     };
   }, [mintList]);
+
+  function cue() {
+    const el = tbl.current;
+    if (el) setMore(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+  }
+  useEffect(() => {
+    const el = tbl.current;
+    if (!el) return;
+    const ro = new ResizeObserver(cue);
+    ro.observe(el);
+    if (el.firstElementChild) ro.observe(el.firstElementChild);
+    return () => ro.disconnect();
+  }, [data]);
 
   function updateSort(next: Intent) {
     setSort(next);
@@ -294,7 +309,7 @@ export default function CompanyPage({
       </div>
       <p className="small muted">{INTENTS.find((i) => i.id === sort)?.line}</p>
 
-      <div className="tbl">
+      <div className={more ? "tbl more" : "tbl"} ref={tbl} onScroll={cue}>
         <table className="matrix">
           <tbody>
             {matrixRows.map((row) => (
