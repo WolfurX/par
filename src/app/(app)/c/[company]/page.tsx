@@ -37,10 +37,12 @@ interface Payload {
   index: { price: number; asOf: number; label: string } | null;
   rows: Row[];
   generatedAt: number;
+  quoted: boolean;
 }
 
 const issuerName: Record<string, string> = { xstocks: "xStocks (Backed)", ondo: "Ondo", backpack: "Backpack", tessera: "Tessera", prestocks: "PreStocks" };
 const noRoute = <span className="muted">no route at this size</span>;
+const quoting = <span className="muted">quoting</span>;
 
 export default function CompanyPage({
   params,
@@ -66,9 +68,28 @@ export default function CompanyPage({
     fetch(`/api/company/${company}?sort=${sort}&size=${size}`)
       .then(async (r) => {
         if (!r.ok) throw new Error((await r.json()).error ?? r.statusText);
-        return r.json();
+        // A frame only replaces an empty page or another unquoted frame, and once quoted rows are on screen
+        // only the quoted line replaces them, so columns move once. A size or sort change keeps the previous
+        // quoted columns until its own quoted line arrives, as today.
+        const lines = r.body!.pipeThrough(new TextDecoderStream()).getReader();
+        let buf = "";
+        let quoted = false;
+        for (;;) {
+          const { value, done } = await lines.read();
+          if (!alive) return;
+          if (done) {
+            if (quoted) return;
+            throw new Error("Quotes did not arrive. Reload to try again.");
+          }
+          buf += value;
+          for (let n = buf.indexOf("\n"); n >= 0; n = buf.indexOf("\n")) {
+            const d: Payload = JSON.parse(buf.slice(0, n));
+            buf = buf.slice(n + 1);
+            quoted ||= d.quoted;
+            setData((prev) => (d.quoted || !prev || !prev.quoted ? d : prev));
+          }
+        }
       })
-      .then((d) => alive && setData(d))
       .catch((e) => alive && setErr(String(e.message ?? e)));
     return () => {
       alive = false;
@@ -117,7 +138,7 @@ export default function CompanyPage({
   }
 
   if (err) return <main><p className="warn">{err}</p></main>;
-  if (!data) return <main><p className="muted">Loading references, pools and quotes.</p></main>;
+  if (!data) return <main><p className="muted">Loading references and pools.</p></main>;
 
   const c = data.company;
   const refs = data.rows.filter((r) => r.reference).map((r) => r.reference!);
@@ -139,21 +160,22 @@ export default function CompanyPage({
     },
     {
       k: "Price at size",
-      cell: (r, i) => (
-        <span className="fade" key={r.quotedAt ?? 0}>
-          {r.unitPrice == null ? (
-            noRoute
-          ) : (
-            <>
-              <span className={i === 0 ? "win" : undefined}>{fmtUsd(r.unitPrice)} USD</span>
-              <span className="detail">
-                route {r.routeLabels.join(" + ") || "none"}
-                {r.quotedAt != null ? `, ${fmtAge(now - r.quotedAt)}` : ""}
-              </span>
-            </>
-          )}
-        </span>
-      ),
+      cell: (r, i) =>
+        !data.quoted ? quoting : (
+          <span className="fade" key={r.quotedAt ?? 0}>
+            {r.unitPrice == null ? (
+              noRoute
+            ) : (
+              <>
+                <span className={i === 0 ? "win" : undefined}>{fmtUsd(r.unitPrice)} USD</span>
+                <span className="detail">
+                  route {r.routeLabels.join(" + ") || "none"}
+                  {r.quotedAt != null ? `, ${fmtAge(now - r.quotedAt)}` : ""}
+                </span>
+              </>
+            )}
+          </span>
+        ),
     },
     {
       k: "7 days",
@@ -165,48 +187,51 @@ export default function CompanyPage({
     },
     {
       k: "Premium",
-      cell: (r) => (
-        <span className="fade" key={r.quotedAt ?? 0}>
-          {r.unitPrice == null ? (
-            noRoute
-          ) : r.premium == null ? (
-            data.market?.session === "closed" && r.issuer !== "tessera" && r.issuer !== "prestocks" ? (
-              "No reference while the US market is closed"
+      cell: (r) =>
+        !data.quoted ? quoting : (
+          <span className="fade" key={r.quotedAt ?? 0}>
+            {r.unitPrice == null ? (
+              noRoute
+            ) : r.premium == null ? (
+              data.market?.session === "closed" && r.issuer !== "tessera" && r.issuer !== "prestocks" ? (
+                "No reference while the US market is closed"
+              ) : (
+                "no reference"
+              )
             ) : (
-              "no reference"
-            )
-          ) : (
-            <>
-              {fmtPct(r.premium)}
-              <span className="detail">{fmtUsd(Math.abs(r.premiumUsd ?? 0), 0)} USD at this size</span>
-              {r.belowMark ? <span className="detail warn">below mark, not a payout</span> : null}
-            </>
-          )}
-        </span>
-      ),
+              <>
+                {fmtPct(r.premium)}
+                <span className="detail">{fmtUsd(Math.abs(r.premiumUsd ?? 0), 0)} USD at this size</span>
+                {r.belowMark ? <span className="detail warn">below mark, not a payout</span> : null}
+              </>
+            )}
+          </span>
+        ),
     },
     {
       k: "Impact",
-      cell: (r) => (
-        <span className="fade" key={r.quotedAt ?? 0}>
-          {r.unitPrice == null ? noRoute : r.impact == null ? <span className="muted">n/a</span> : `${(r.impact * 100).toFixed(2)}%`}
-        </span>
-      ),
+      cell: (r) =>
+        !data.quoted ? quoting : (
+          <span className="fade" key={r.quotedAt ?? 0}>
+            {r.unitPrice == null ? noRoute : r.impact == null ? <span className="muted">n/a</span> : `${(r.impact * 100).toFixed(2)}%`}
+          </span>
+        ),
     },
     {
       k: "Round trip",
-      cell: (r) => (
-        <span className="fade" key={r.quotedAt ?? 0}>
-          {r.unitPrice == null || r.roundTripPct == null ? (
-            noRoute
-          ) : (
-            <>
-              {fmtPct(r.roundTripPct, 1)}
-              <span className="detail">{fmtUsd(data.size + (r.roundTripUsdc ?? 0), 0)} USDC back</span>
-            </>
-          )}
-        </span>
-      ),
+      cell: (r) =>
+        !data.quoted ? quoting : (
+          <span className="fade" key={r.quotedAt ?? 0}>
+            {r.unitPrice == null || r.roundTripPct == null ? (
+              noRoute
+            ) : (
+              <>
+                {fmtPct(r.roundTripPct, 1)}
+                <span className="detail">{fmtUsd(data.size + (r.roundTripUsdc ?? 0), 0)} USDC back</span>
+              </>
+            )}
+          </span>
+        ),
     },
     {
       k: "Fees in",
@@ -281,6 +306,8 @@ export default function CompanyPage({
           </b>{" "}
           <span className="muted">Compare {data.rows.length} wrappers below.</span>
         </p>
+      ) : !data.quoted && data.rows.length >= 2 ? (
+        <p className="muted">Quoting {data.rows.length} wrappers at {fmtUsd(data.size, 0)} USDC.</p>
       ) : null}
       <dl className="label">
         {uniqueRefs.map((r) => (

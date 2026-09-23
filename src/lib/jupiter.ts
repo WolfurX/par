@@ -620,12 +620,13 @@ export async function orderCompare(inputMint: string, outputMint: string, amount
 
 // ---------- quoteAtSize ----------
 
-const SIZED_TTL_MS = 30_000;
+const SIZED_TTL_MS = 120_000;
 const sizedQuotes = new Map<string, { at: number; value: QuoteResult }>();
 
 /**
- * Quote only: no taker, no build, no simulation. Cached 30 s per mint, side and size. /order takes its own fee on
- * the USDC leg (reported as feeBps, 10 bps on the pairs checked 2026-09-20), which is what FEE_BPS also assumes.
+ * Quote only: no taker, no build, no simulation. Cached 120 s per mint, side and size (the matrix prints each
+ * quote's age; the buy screen re-quotes and simulates before signing). /order takes its own fee on the USDC leg
+ * (reported as feeBps, 10 bps on the pairs checked 2026-09-20), which is what FEE_BPS also assumes.
  */
 export async function quoteAtSize(mint: string, side: Side, amountRaw: string): Promise<QuoteResult | null> {
   const exclude = excludedDexesFor(mint);
