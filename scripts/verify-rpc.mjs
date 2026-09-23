@@ -1,5 +1,5 @@
 // Verify src/lib/rpc.ts against live on-chain mint state.
-// Run: cd /home/rizki/projects/par && node --env-file=.env.local scripts/verify-rpc.mjs
+// Run from the repo root: node --env-file=.env.local scripts/verify-rpc.mjs
 
 import { getMintStates } from "../src/lib/rpc.ts";
 import { wrappers } from "../src/lib/registry.ts";

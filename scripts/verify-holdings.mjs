@@ -1,7 +1,7 @@
 // Verifies src/lib/holdings.ts against the live Helius endpoints directly (no import from the .ts
 // module, so this is a real independent check, not a re-run of the same arithmetic).
 //
-// Run: cd /home/rizki/projects/par && node --env-file=.env.local scripts/verify-holdings.mjs
+// Run from the repo root: node --env-file=.env.local scripts/verify-holdings.mjs
 
 const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL;
 if (!RPC_URL) {

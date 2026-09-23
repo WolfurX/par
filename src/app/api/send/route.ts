@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     const status = result.status === "failed" ? 422 : result.status === "timeout" ? 202 : 200;
     return Response.json(result, { status, headers: { "cache-control": "no-store" } });
   } catch (e) {
-    if (e instanceof JupiterError) return bad(e.message, e.status, { code: e.code });
+    if (e instanceof JupiterError) return bad(e.code === "blocked" ? "Swap routing is not available for this address." : e.message, e.status, { code: e.code });
     return bad(e instanceof Error ? e.message : "send failed", 502);
   }
 }

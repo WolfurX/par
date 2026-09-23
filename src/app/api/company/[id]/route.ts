@@ -24,7 +24,8 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   const company = companyById.get(id);
   if (!company) return NextResponse.json({ error: "unknown company" }, { status: 404 });
   const url = new URL(req.url);
-  const size = Math.min(1_000_000, Math.max(1, Number(url.searchParams.get("size") ?? DEFAULT_SIZE) || DEFAULT_SIZE));
+  // Whole USDC: sized quotes are cached per exact amount, so fractions would each cost a fresh Jupiter quote.
+  const size = Math.round(Math.min(1_000_000, Math.max(1, Number(url.searchParams.get("size") ?? DEFAULT_SIZE) || DEFAULT_SIZE)));
   const sortParam = url.searchParams.get("sort");
   const sort: Intent = INTENTS.some((i) => i.id === sortParam) ? (sortParam as Intent) : "price";
 

@@ -1,5 +1,5 @@
 // Verify src/lib/screening.ts against a live OFAC SDN refresh and the live screening APIs.
-// Run: cd /home/rizki/projects/par && node --env-file=.env.local scripts/verify-screening.mjs
+// Run from the repo root: node --env-file=.env.local scripts/verify-screening.mjs
 
 import { refreshSdn } from "./sdn-refresh.mjs";
 import { screenAddress, getSdnInfo } from "../src/lib/screening.ts";

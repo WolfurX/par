@@ -19,6 +19,11 @@ import { screenAddress } from "@/lib/screening";
 
 const JUP_BASE = "https://api.jup.ag/swap/v2";
 const SYSTEM_PROGRAM = "11111111111111111111111111111111";
+// Programs sendSigned relays for: the aggregator every /build swap instruction calls (checked 2026-09-23), and the
+// Tessera referral program the registration builder in src/lib/tessera.ts targets (not imported: its JSON IDL import
+// does not load under plain Node, which the scripts use).
+export const JUPITER_SWAP_PROGRAM = "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4";
+const TESSERA_REFERRAL_PROGRAM = "TESMgr3q4s1CK5nGz7bmkbMQBQeSt8N9wpZjTDWm2cY";
 const SIM_CU_LIMIT = 1_400_000;
 const CU_HEADROOM = 1.2;
 const DELIVERY_FLOOR = 0.999; // a label delivering under this ratio of the quote is excluded for that mint
@@ -280,23 +285,30 @@ function excludeForMint(mint: string, labels: string[]): void {
  * (the one that delivers the output token, where a transfer-fee-ignoring adapter shows up), only when the ratio is a
  * real short-pay (under SHORTPAY_FLOOR, not multi-hop rounding), and never a leg already measured good. Exclusions
  * expire after EXCLUSION_TTL_MS so one bad measurement cannot route a mint around its main pool for the rest of the run.
+ * Only a pinned USDC placeholder's simulations are recorded: delivery is post minus pre on the payer's own account, so
+ * any other payer can move tokens between the two reads and fake a short-pay, or a good delivery.
  */
 const SHORTPAY_FLOOR = 0.9975;
 const EXCLUSION_TTL_MS = 60 * 60 * 1000;
 const excludedAt = new Map<string, number>(); // `${mint}:${label}` -> ms
 function recordDelivery(mint: string, labels: string[], ratio: number): string[] {
-  const good = goodLabelsByMint.get(mint) ?? new Set<string>();
   if (ratio >= DELIVERY_FLOOR) {
+    const good = goodLabelsByMint.get(mint) ?? new Set<string>();
     for (const l of labels) good.add(l);
     goodLabelsByMint.set(mint, good);
     return [];
   }
-  if (ratio >= SHORTPAY_FLOOR || labels.length === 0) return [];
-  const last = labels[labels.length - 1];
-  if (good.has(last)) return [];
+  const last = shortPayingLeg(mint, labels, ratio);
+  if (!last) return [];
   excludeForMint(mint, [last]);
   excludedAt.set(`${mint}:${last}`, Date.now());
   return [last];
+}
+/** The leg recordDelivery would blame for this delivery, recording nothing. */
+function shortPayingLeg(mint: string, labels: string[], ratio: number): string | undefined {
+  if (ratio >= SHORTPAY_FLOOR || labels.length === 0) return undefined;
+  const last = labels[labels.length - 1];
+  return goodLabelsByMint.get(mint)?.has(last) ? undefined : last;
 }
 /**
  * ladder() drops a leg that makes the simulation revert for that one build only. A second revert of the same leg on
@@ -305,6 +317,9 @@ function recordDelivery(mint: string, labels: string[], ratio: number): string[]
  * the simulation, not the leg, so it only arms the record, and a revert under REVERT_MIN_GAP_MS after the arming one is
  * the same moment (ladder() steps and buildForUser's two ladders run seconds apart) and counts for nothing. A leg
  * measured good earlier is excluded too: two reverts a minute or more apart outweigh an older good delivery.
+ * Only simulations paid by a pinned USDC placeholder (USDC_TAKER_CANDIDATES) count. Any other taker is chosen by a
+ * caller, or is a mint's largest holder on the sell side, and its own token account (CPI Guard, a required memo) can
+ * make every route revert, which would exclude the pool for every visitor.
  */
 const REVERT_MIN_GAP_MS = 60_000;
 const revertedAt = new Map<string, number>(); // `${mint}:${label}` -> ms of the arming revert
@@ -501,7 +516,7 @@ const takerMissAt = new Map<string, number>();
 // before use; they only ever act as simulation payers. pickTaker warns when fewer than TAKER_POOL_WARN_BELOW of them
 // are viable and, when none is, falls back to wallets discovered through the registry: owners of the largest token
 // accounts of every pinned wrapper that also hold USDC (getTokenLargestAccounts works on those mints).
-const USDC_TAKER_CANDIDATES = [
+export const USDC_TAKER_CANDIDATES = [
   "5tzFkiKscXHK5ZXCGbXZxdw7gTjjD1mBwuoFbhUvuAi9",
   "2AQdpHJ2JpcEgPiATUXjQxA8QmafFegfQwSLWSprPicm",
   "H8sMJSCQxfKiFTCfDR3DUMLPwcRbM61LGFJ8N4dK3WjS",
@@ -734,9 +749,10 @@ async function buildAndAssemble(params: BuildParams, blockhash: string | undefin
 
 /**
  * Build, assemble, simulate. On a failed simulation: re-quote with restrictIntermediateTokens=true, then exclude the
- * failing label. Returns the last attempt either way; `ok` says whether a simulation passed.
+ * failing label. Returns the last attempt either way; `ok` says whether a simulation passed. `learnReverts` lets a
+ * revert count toward excluding its leg for the mint (see recordRevert for which takers qualify).
  */
-async function ladder(base: BuildParams, mint: string, blockhash: string | undefined, cuLimit: number, watch: string[], simulateIt: boolean): Promise<LadderResult> {
+async function ladder(base: BuildParams, mint: string, blockhash: string | undefined, cuLimit: number, watch: string[], simulateIt: boolean, learnReverts: boolean): Promise<LadderResult> {
   const steps: string[] = [];
   const labels = await programLabelMap();
   const exclude = [...(base.excludeDexes ?? [])];
@@ -770,7 +786,7 @@ async function ladder(base: BuildParams, mint: string, blockhash: string | undef
     if (!sim.err) return { attempt, ok: true, steps };
     lastReason = describeSimError(sim);
     lastFailingLabel = failingLabel(sim.logs, labels);
-    if (lastFailingLabel && !base.dexes?.length) recordRevert(mint, lastFailingLabel);
+    if (learnReverts && lastFailingLabel && !base.dexes?.length) recordRevert(mint, lastFailingLabel);
     steps.push(`step ${step} route ${build.routePlan.map((r) => r.swapInfo.label).join("+")} failed: ${lastReason}${lastFailingLabel ? ` [${lastFailingLabel}]` : ""}`);
   }
   if (!last) throw new JupiterError(lastReason || "no route", 502, "build");
@@ -843,8 +859,10 @@ export async function getQuote(req: QuoteOptions): Promise<QuoteResultExt> {
 
   const base: BuildParams = { inputMint, outputMint, amountRaw, taker, slippageBps, excludeDexes: excludedDexesFor(mint), dexes: req.dexes };
   const comparePromise = orderCompare(inputMint, outputMint, amountRaw);
+  // Only a pinned USDC placeholder's simulations teach the per-mint lists (see recordRevert and recordDelivery).
+  const trustedPayer = placeholder && USDC_TAKER_CANDIDATES.includes(taker);
 
-  let result = await ladder(base, mint, undefined, SIM_CU_LIMIT, watch, simulateIt);
+  let result = await ladder(base, mint, undefined, SIM_CU_LIMIT, watch, simulateIt, trustedPayer);
   const newlyExcluded: string[] = [];
 
   const readAttempt = (r: LadderResult) => {
@@ -862,10 +880,11 @@ export async function getQuote(req: QuoteOptions): Promise<QuoteResultExt> {
   };
 
   let read = readAttempt(result);
-  // A measured short-pay excludes its label for the mint and re-quotes, at most twice, so the label shows the route
-  // the user would actually get (PreStocks: Manifest 0.995x, then Quantum 0.998x, then Meteora DLMM + BisonFi).
+  // On a pinned placeholder, a measured short-pay excludes its label for the mint and re-quotes, at most twice, so the
+  // label shows the route the user would actually get (PreStocks: Manifest 0.995x, then Quantum 0.998x, then Meteora
+  // DLMM + BisonFi). Any other payer's quote shows its measured delivery as is; its build routes around a short-pay.
   for (let round = 0; read.ratio !== undefined; round++) {
-    const newly = recordDelivery(mint, read.labels, read.ratio);
+    const newly = trustedPayer ? recordDelivery(mint, read.labels, read.ratio) : [];
     if (!newly.length) break;
     newlyExcluded.push(...newly);
     const short = `${read.labels.join("+")} delivered ${read.ratio.toFixed(6)}x the quote`;
@@ -873,7 +892,7 @@ export async function getQuote(req: QuoteOptions): Promise<QuoteResultExt> {
       reason = `${short}; ${newlyExcluded.join(", ")} excluded for this mint`;
       break;
     }
-    const again = await ladder({ ...base, excludeDexes: excludedDexesFor(mint) }, mint, undefined, SIM_CU_LIMIT, watch, true);
+    const again = await ladder({ ...base, excludeDexes: excludedDexesFor(mint) }, mint, undefined, SIM_CU_LIMIT, watch, true, trustedPayer);
     const readAgain = readAttempt(again);
     if (!again.ok || readAgain.ratio === undefined) {
       reason = `${short}; ${newlyExcluded.join(", ")} excluded for this mint, no other route simulated`;
@@ -989,8 +1008,8 @@ export async function buildForUser(p: BuildForUserRequest): Promise<BuildForUser
 
   const base: BuildParams = { inputMint, outputMint, amountRaw, taker: taker.toBase58(), slippageBps, excludeDexes: excludedDexesFor(mint) };
 
-  // Sizing pass at 1.4M CU.
-  const sized = await ladder(base, mint, blockhash, SIM_CU_LIMIT, watch, true);
+  // Sizing pass at 1.4M CU. The caller's own wallet never teaches the exclusion list its reverts.
+  const sized = await ladder(base, mint, blockhash, SIM_CU_LIMIT, watch, true, false);
   if (!sized.ok || !sized.attempt.sim) throw new JupiterError(`thin at this size: ${sized.reason}`, 422, "no_route");
 
   const finalize = async (attempt: Attempt, sim: SimResult) => {
@@ -1007,19 +1026,20 @@ export async function buildForUser(p: BuildForUserRequest): Promise<BuildForUser
   let delivered = fin.finalSim.post[1] - pre[1];
   let ratio = out > BigInt(0) ? Number(delivered) / Number(out) : 0;
   const labels = () => attempt.build.routePlan.map((l) => l.swapInfo.label);
-  // A short-paying route excludes its label for the mint and rebuilds, at most twice; keep the best measured route.
+  // A short-paying route excludes its label for this build and rebuilds, at most twice; keep the best measured route.
+  // The user's own measurement never reaches the per-mint lists (see recordDelivery).
+  const buildExcludes = [...(base.excludeDexes ?? [])];
   for (let round = 0; round < 2; round++) {
-    if (!recordDelivery(mint, labels(), ratio).length) break;
-    const again = await ladder({ ...base, excludeDexes: excludedDexesFor(mint) }, mint, blockhash, SIM_CU_LIMIT, watch, true);
+    const leg = shortPayingLeg(mint, labels(), ratio);
+    if (!leg) break;
+    buildExcludes.push(leg);
+    const again = await ladder({ ...base, excludeDexes: buildExcludes }, mint, blockhash, SIM_CU_LIMIT, watch, true, false);
     if (!again.ok || !again.attempt.sim) break;
     const f2 = await finalize(again.attempt, again.attempt.sim);
     const out2 = BigInt(again.attempt.build.outAmount);
     const d2 = f2.finalSim.post[1] - pre[1];
     const r2 = out2 > BigInt(0) ? Number(d2) / Number(out2) : 0;
-    if (r2 < ratio) {
-      recordDelivery(mint, again.attempt.build.routePlan.map((l) => l.swapInfo.label), r2);
-      break;
-    }
+    if (r2 < ratio) break;
     attempt = again.attempt;
     fin = f2;
     out = out2;
@@ -1064,7 +1084,11 @@ export interface SendResult {
   explorerUrl: string;
 }
 
-/** Broadcast a user-signed transaction through Helius, wait up to 60 s, then read the landed deltas. */
+/**
+ * Broadcast a user-signed transaction through Helius, wait up to 60 s, then read the landed deltas. Only a transaction
+ * to the Jupiter aggregator or the Tessera referral program is relayed, and only for a payer that passes screening, so
+ * the endpoint is neither a free relay on our key nor a way around the screening /api/build does.
+ */
 export async function sendSigned(signedTransactionBase64: string): Promise<SendResult> {
   let tx: VersionedTransaction;
   try {
@@ -1073,7 +1097,16 @@ export async function sendSigned(signedTransactionBase64: string): Promise<SendR
     throw new JupiterError("signedTransactionBase64 does not decode to a transaction", 400, "input");
   }
   if (!tx.signatures.length || tx.signatures[0].every((b) => b === 0)) throw new JupiterError("transaction is not signed", 400, "input");
-  const taker = tx.message.staticAccountKeys[0].toBase58();
+  const staticKeys = tx.message.staticAccountKeys;
+  // Top-level program ids are always static keys (a lookup table cannot supply one).
+  const relayable = tx.message.compiledInstructions.some((ix) => {
+    const program = staticKeys[ix.programIdIndex]?.toBase58();
+    return program === JUPITER_SWAP_PROGRAM || program === TESSERA_REFERRAL_PROGRAM;
+  });
+  if (!relayable) throw new JupiterError("only Jupiter swaps and Tessera referral transactions are relayed", 400, "input");
+  const taker = staticKeys[0].toBase58();
+  const screen = await screenAddress(taker);
+  if (screen.blocked) throw new JupiterError(`address blocked${screen.reason ? `: ${screen.reason}` : ""}`, 403, "blocked", { reason: screen.reason });
   const feeAta = feeAccount().toBase58();
 
   const signature = await rpc<string>("sendTransaction", [

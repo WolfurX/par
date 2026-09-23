@@ -1,5 +1,5 @@
 // Verify src/lib/history.ts against live sources.
-// Run: cd /home/rizki/projects/par && node --env-file=.env.local scripts/verify-history.mjs
+// Run from the repo root: node --env-file=.env.local scripts/verify-history.mjs
 
 // src/lib uses extensionless imports (Next resolves them); node needs the extension, so add a hook.
 import { register } from "node:module";

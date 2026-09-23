@@ -3,7 +3,7 @@
 // Streams the file line by line and extracts every "Digital Currency Address - <chain>"
 // feature; the raw XML is never written to disk. The legacy sdn.csv truncates the SOL
 // list, so this reads the advanced XML instead.
-// Run: cd /home/rizki/projects/par && node --env-file=.env.local scripts/sdn-refresh.mjs
+// Run from the repo root: node --env-file=.env.local scripts/sdn-refresh.mjs
 
 import { createInterface } from "node:readline";
 import { Readable } from "node:stream";

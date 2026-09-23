@@ -17,7 +17,8 @@ const FEE_BPS = Number(process.env.FEE_BPS ?? 10);
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const mint = url.searchParams.get("mint") ?? "";
-  const size = Math.max(1, Number(url.searchParams.get("size") ?? 1000) || 1000);
+  // Whole USDC, 1 to 1,000,000, like the company route: every distinct size is a fresh simulation on the shared key.
+  const size = Math.round(Math.min(1_000_000, Math.max(1, Number(url.searchParams.get("size") ?? 1000) || 1000)));
   const taker = url.searchParams.get("taker") ?? undefined;
   const w = wrapperByMint.get(mint);
   if (!w) return NextResponse.json({ error: "unknown wrapper" }, { status: 404 });

@@ -1,5 +1,5 @@
 // Verify src/lib/reference.ts and src/lib/pyth-core.ts against the live sources.
-// Run: cd /home/rizki/projects/par && node --env-file=.env.local scripts/verify-reference.mjs
+// Run from the repo root: node --env-file=.env.local scripts/verify-reference.mjs
 //
 // Nothing here writes to a chain. Every number printed has a URL or an account address beside it so it
 // can be checked by hand against the issuer.

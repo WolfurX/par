@@ -1,6 +1,6 @@
 // Fetches missing registry facts from issuer APIs, verifies each on-chain, and prints a patch
 // for src/lib/registry.ts. This script only prints; it does not write the file.
-// Run: cd /home/rizki/projects/par && node --env-file=.env.local scripts/registry-fill.mjs
+// Run from the repo root: node --env-file=.env.local scripts/registry-fill.mjs
 
 import { PublicKey } from "@solana/web3.js";
 import { getConnection } from "../src/lib/rpc.ts";

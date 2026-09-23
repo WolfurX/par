@@ -1,7 +1,7 @@
 // Verify the Jupiter module against mainnet: quotes, simulations, fee account deltas, delivery ratios, the /order
 // comparison, and the Manifest short-pay catch. Nothing is broadcast; every transaction is simulateTransaction only.
 //
-// Run: cd /home/rizki/projects/par && node --env-file=.env.local scripts/verify-jupiter.mjs
+// Run from the repo root: node --env-file=.env.local scripts/verify-jupiter.mjs
 // Optional: PAR_BASE_URL=http://localhost:3000 also calls GET /api/quote on a running dev server.
 //
 // The script loads the real src/lib/jupiter.ts through Node's type stripping. Only "@/lib/screening" is stubbed
@@ -49,7 +49,7 @@ registerHooks({
 
 const jup = await import("../src/lib/jupiter.ts");
 const { wrapperByMint } = await import("../src/lib/registry.ts");
-const { getQuote, feeAccount, feeBps, excludedDexesFor, viableUsdcTakers, buildForUser, JupiterError } = jup;
+const { getQuote, feeAccount, feeBps, excludedDexesFor, viableUsdcTakers, buildForUser, JupiterError, JUPITER_SWAP_PROGRAM } = jup;
 
 for (const k of ["HELIUS_API_KEY", "FEE_WALLET", "FEE_BPS"]) {
   if (!process.env[k]) {
@@ -201,6 +201,9 @@ for (const t of TARGETS) {
       console.log(`   blockhash ${b.blockhash} valid to height ${b.lastValidBlockHeight} | tx ${b.transactionBase64.length} chars base64`);
       const tx = VersionedTransaction.deserialize(Buffer.from(b.transactionBase64, "base64"));
       check("returned transaction is unsigned and pays from the taker", tx.signatures.every((s) => s.every((x) => x === 0)) && tx.message.staticAccountKeys[0].toBase58() === taker);
+      // /api/send relays only transactions with a top-level instruction to this program, after the user has signed.
+      const programs = tx.message.compiledInstructions.map((ix) => tx.message.staticAccountKeys[ix.programIdIndex].toBase58());
+      check("the swap is a top-level instruction to JUPITER_SWAP_PROGRAM, the program /api/send relays for", programs.includes(JUPITER_SWAP_PROGRAM), [...new Set(programs)].join(" "));
       check("buildForUser fee equals amount x FEE_BPS / 10000", b.feeAmountRaw === ((BigInt(BUY_USDC_RAW) * BigInt(bps)) / 10000n).toString(), b.feeAmountRaw);
       check("compute unit limit covers units used and stays under 1.4M", b.computeUnitLimit >= b.computeUnitsUsed && b.computeUnitLimit <= 1400000, `${b.computeUnitsUsed} used, limit ${b.computeUnitLimit}`);
       check("buildForUser delivery ratio >= 0.999", b.deliveryRatio >= 0.999, b.deliveryRatio.toFixed(6));

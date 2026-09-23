@@ -34,7 +34,7 @@ interface LabelPayload {
   generatedAt: number;
 }
 
-interface Receipt { signature: string; receivedRaw?: string; expectedRaw: string; minimumRaw: string; feeRaw?: string; feeAccount?: string }
+interface Receipt { side: Side; signature: string; receivedRaw?: string; expectedRaw: string; minimumRaw: string; feeRaw?: string; feeAccount?: string }
 
 interface HistoryPayload {
   symbol: string;
@@ -104,9 +104,11 @@ export default function LabelPage({
   useEffect(() => {
     load();
     if (timer.current) window.clearInterval(timer.current);
+    // Each refresh re-simulates on the shared Jupiter key (about four calls), so a visible tab refreshes every 2 min;
+    // signing always builds and simulates afresh.
     timer.current = window.setInterval(() => {
       if (!document.hidden) load();
-    }, 30_000);
+    }, 120_000);
     return () => {
       if (timer.current) window.clearInterval(timer.current);
     };
@@ -133,12 +135,17 @@ export default function LabelPage({
 
   if (!c || !w) return <main><p className="warn">Unknown wrapper.</p></main>;
 
+  // What a swap pays out: wrapper units on a buy (decimals and multiplier applied), USDC on a sell.
+  const outUnits = (s: Side, raw: string | undefined) =>
+    !raw ? "" : s === "buy" ? fmtUnits((Number(raw) / 10 ** w.decimals) * (data?.row.multiplier ?? 1)) : `${fmtUsd(Number(raw) / 1e6)} USDC`;
+
   async function buildAndSign() {
     if (!data || !publicKey || !signTransaction) return;
     setStatus("Building the transaction and simulating it.");
     setReceipt(null);
     try {
-      const amountRaw = side === "buy" ? String(Math.round(size * 1e6)) : data.buy?.expectedRaw ?? "0";
+      // The size the label was quoted at (the server rounds it to whole USDC and caps it), not the raw input.
+      const amountRaw = side === "buy" ? String(Math.round(data.size * 1e6)) : data.buy?.expectedRaw ?? "0";
       const res = await fetch("/api/build", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -146,7 +153,7 @@ export default function LabelPage({
       });
       const built = await res.json();
       if (!res.ok) throw new Error(built.error ?? res.statusText);
-      setStatus(`Expected ${fmtUnits(Number(built.expectedRaw) / 10 ** w!.decimals * (data.row.multiplier || 1))}, minimum ${fmtUnits(Number(built.minimumRaw) / 10 ** w!.decimals * (data.row.multiplier || 1))}. Sign in your wallet.`);
+      setStatus(`Expected ${outUnits(side, built.expectedRaw)}, minimum ${outUnits(side, built.minimumRaw)}. Sign in your wallet.`);
       const tx = VersionedTransaction.deserialize(b64ToBytes(built.transactionBase64));
       const signed = await signTransaction(tx);
       setStatus("Sending and waiting for confirmation.");
@@ -157,7 +164,10 @@ export default function LabelPage({
       });
       const r = await sent.json();
       if (!sent.ok) throw new Error(r.error ?? sent.statusText);
-      setReceipt({ signature: r.signature, receivedRaw: r.receivedRaw, expectedRaw: built.expectedRaw, minimumRaw: built.minimumRaw, feeRaw: r.feeRaw, feeAccount: r.feeAccount });
+      // /api/send reports the payer's landed change per mint and the fee account's change; empty until confirmed.
+      const outMint = side === "buy" ? w!.mint : data.usdcMint;
+      const received = (r.takerTokenDeltas as { mint: string; deltaRaw: string }[] | undefined)?.find((d) => d.mint === outMint)?.deltaRaw;
+      setReceipt({ side, signature: r.signature, receivedRaw: received, expectedRaw: built.expectedRaw, minimumRaw: built.minimumRaw, feeRaw: r.feeAccountDeltaRaw, feeAccount: r.feeAccount });
       setStatus(null);
       load();
     } catch (e) {
@@ -187,7 +197,6 @@ export default function LabelPage({
   }
 
   const m = data?.row.multiplier ?? 1;
-  const units = (raw: string | undefined) => (raw ? fmtUnits((Number(raw) / 10 ** w.decimals) * m) : "");
 
   const dash = <span className="muted">-</span>;
   const quoteAge = data ? Math.floor(Date.now() / 1000) - (data.buy?.quotedAt ?? data.generatedAt) : 0;
@@ -396,7 +405,7 @@ export default function LabelPage({
           <dt>Receipt</dt>
           <dd>
             <a href={`https://solscan.io/tx/${receipt.signature}`} target="_blank" rel="noreferrer">{receipt.signature.slice(0, 16)}…</a>
-            <span className="detail">received {units(receipt.receivedRaw) || "pending"} · expected {units(receipt.expectedRaw)} · minimum {units(receipt.minimumRaw)}</span>
+            <span className="detail">received {outUnits(receipt.side, receipt.receivedRaw) || "pending"} · expected {outUnits(receipt.side, receipt.expectedRaw)} · minimum {outUnits(receipt.side, receipt.minimumRaw)}</span>
             {receipt.feeRaw ? <span className="detail">Parsec fee {fmtUsd(Number(receipt.feeRaw) / 1e6)} USDC to <a href={`https://solscan.io/account/${receipt.feeAccount}`} target="_blank" rel="noreferrer">the fee account</a></span> : null}
           </dd>
           {w.issuer === "tessera" && tessera && !tessera.registered && tessera.guard.ok ? (

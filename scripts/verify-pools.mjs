@@ -1,5 +1,5 @@
 // Verify src/lib/pools.ts against live DexScreener data.
-// Run: cd /home/rizki/projects/par && node --env-file=.env.local scripts/verify-pools.mjs
+// Run from the repo root: node --env-file=.env.local scripts/verify-pools.mjs
 
 import { getPools } from "../src/lib/pools.ts";
 import { wrappers } from "../src/lib/registry.ts";
