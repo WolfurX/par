@@ -40,14 +40,14 @@ export default function RulesPage() {
         <br />
         money line = S − S ÷ (1 + premium)
         <br />
-        impact = max(0, P<sub>unit</sub> × (1 − t) ÷ mid − 1), at the entered size S
+        impact = max(0, P<sub>unit</sub> ÷ P<sub>unit, 10</sub> − 1), at the entered size S
       </p>
       <p>
-        Impact compares the unit price paid at size with mid, Jupiter&apos;s price per unit for the same token. t is
-        the issuer&apos;s transfer fee (Tessera 0.2%, PreStocks 1%, others 0), which Jupiter&apos;s
-        quote already includes and which is listed under fees in, so it is taken out first. Impact is never below 0
-        and is not shown when either price is missing; above 5% the row is marked thin. The sell side is in the
-        round trip.
+        Impact compares the unit price paid at size with the unit price of a 10 USDC buy of the same token on the
+        same path. Both carry the same swap fee and the issuer&apos;s transfer fee, so the fees cancel. On the buy
+        screen the price at size is the simulated build, so its impact can differ from the comparison&apos;s by the
+        difference between the two routes. Impact is never below 0 and is not shown when either price is missing;
+        above 5% the row is marked thin. The sell side is in the round trip.
       </p>
 
       <h2>Expected and minimum</h2>
@@ -55,8 +55,9 @@ export default function RulesPage() {
         Expected is the Jupiter quote cross-checked by a server-side simulation of the exact transaction at commitment processed. If the
         simulated delivery differs from the quote by more than 0.05%, the simulated figure is printed and the route is marked. Minimum is
         the on-chain threshold at the chosen slippage (50 bps on pools above 500K USD, 100 bps below), the only figure the chain enforces.
-        Route legs that deliver under 0.999× the quote are excluded for that token; as of 2026-09-16 that is Manifest on PreStocks, which
-        ignores the transfer fee.
+        A route leg that delivers under 0.9975× the quote is excluded for that token, and so is a leg that makes the simulation revert
+        twice a minute or more apart within an hour; exclusions last an hour and the company matrix uses the same list. Manifest on PreStocks, which ignores the
+        transfer fee, short-paid on 2026-09-16 and reverts as of 2026-09-23.
       </p>
 
       <h2>Fees and round trip</h2>

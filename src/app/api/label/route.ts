@@ -4,10 +4,9 @@ import { legalFor, companyNotes } from "@/lib/legal";
 import { getMintStates } from "@/lib/rpc";
 import { getReference, getPythProPrice, getPythIndex } from "@/lib/reference";
 import { getPools } from "@/lib/pools";
-import { getMids } from "@/lib/jupprice";
-import { getQuote } from "@/lib/jupiter";
+import { getQuote, quoteAtSize } from "@/lib/jupiter";
 import { getMarketState, describeMarketState } from "@/lib/sessions";
-import { computeRow } from "@/lib/ranking";
+import { computeRow, unitPriceAt, MID_SIZE_USDC } from "@/lib/ranking";
 import type { QuoteResult } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +24,7 @@ export async function GET(req: Request) {
   const company = companyById.get(w.companyId)!;
   const legal = legalFor(w.issuer, w.legalId);
 
-  const [states, pools, reference, market, mids] = await Promise.all([
+  const [states, pools, reference, market] = await Promise.all([
     getMintStates([mint]).catch(() => new Map()),
     getPools([mint]).catch(() => new Map()),
     getReference(w, company).catch((e) => {
@@ -33,12 +32,13 @@ export async function GET(req: Request) {
       return null;
     }),
     company.kind === "public" ? getMarketState().catch(() => null) : Promise.resolve(null),
-    getMids([mint]).catch(() => new Map()),
   ]);
   const state = states.get(mint) ?? null;
   const pool = pools.get(mint) ?? null;
   const liquidityHint = pool?.liquidityUsd ?? 0;
 
+  // The same small /order quote the company matrix uses for its mid (same cache key), started beside the build.
+  const smallP = !pool || pool.liquidityUsd > 0 ? quoteAtSize(mint, "buy", String(MID_SIZE_USDC * 1e6)).catch(() => null) : Promise.resolve(null);
   let buy: QuoteResult | null = null;
   let sell: QuoteResult | null = null;
   let quoteError: string | null = null;
@@ -59,7 +59,9 @@ export async function GET(req: Request) {
     company.pythIndexProId ? getPythIndex(company.pythIndexProId).catch(() => null) : Promise.resolve(null),
   ]);
 
-  const row = computeRow({ wrapper: w, legal, reference, state, pool, buy, sell, sizeUsdc: size, feeBps: FEE_BPS, mid: mids.get(mint)?.usdPricePerUnit ?? null });
+  const small = await smallP;
+  const mid = buy && buy.expectedRaw !== "0" ? unitPriceAt(small, MID_SIZE_USDC, FEE_BPS, w.decimals, state?.multiplier ?? 1) : null;
+  const row = computeRow({ wrapper: w, legal, reference, state, pool, buy, sell, sizeUsdc: size, feeBps: FEE_BPS, mid });
 
   return NextResponse.json({
     wrapper: w,

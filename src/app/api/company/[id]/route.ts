@@ -4,10 +4,9 @@ import { legalFor, companyNotes } from "@/lib/legal";
 import { getMintStates } from "@/lib/rpc";
 import { getReference, getPythIndex } from "@/lib/reference";
 import { getPools } from "@/lib/pools";
-import { getMids } from "@/lib/jupprice";
 import { quoteAtSize } from "@/lib/jupiter";
 import { getMarketState, describeMarketState } from "@/lib/sessions";
-import { rankRows, computeRow, INTENTS, type Intent } from "@/lib/ranking";
+import { rankRows, computeRow, unitPriceAt, INTENTS, MID_SIZE_USDC, type Intent } from "@/lib/ranking";
 import type { Reference } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -15,8 +14,10 @@ export const dynamic = "force-dynamic";
 const FEE_BPS = Number(process.env.FEE_BPS ?? 10);
 const DEFAULT_SIZE = 1000;
 
-// Company page composition, streamed as two NDJSON lines. The first is the frame without sized quotes.
+// Company page composition, streamed as three NDJSON lines. The first is the frame without sized quotes.
 // The second is the same rows with sized /order quotes, one per wrapper, quote only and cached 120 s.
+// The third adds impact from a small quote per wrapper; under Sort by Liquidity, whose order depends on impact, the
+// quoted line waits for it and is the last line.
 // The buy screen simulates the selected wrapper.
 export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
@@ -45,6 +46,17 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
       }),
     ),
   );
+  // The mid for impact: a small buy on the same path, cached like the sized quotes. It is queued after the sized
+  // quotes so it never delays them on the Jupiter pacing window, and it arrives as a third line.
+  const smallP = sizedP.then((sized) =>
+    Promise.all(
+      ws.map(async (w, i) => {
+        const buy = sized[i].buy;
+        if (!buy || buy.expectedRaw === "0") return null;
+        return quoteAtSize(w.mint, "buy", String(MID_SIZE_USDC * 1e6)).catch(() => null);
+      }),
+    ),
+  );
   const marketP = company.kind === "public" ? getMarketState().catch(() => null) : Promise.resolve(null);
   // References start after the market state: the Pyth Pro and ticker references date their prices from the
   // same 4.8 MB Pyth session schedule, which is then held in memory, so a cold instance downloads it once and
@@ -60,19 +72,21 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
     ),
   );
 
-  const [states, pools, mids, market, refs, index] = await Promise.all([
+  const [states, pools, market, refs, index] = await Promise.all([
     getMintStates(mints).catch(() => new Map()),
     poolsP,
-    getMids(mints).catch(() => new Map()),
     marketP,
     refsP,
     company.pythIndexProId ? getPythIndex(company.pythIndexProId).catch(() => null) : Promise.resolve(null),
   ]);
 
-  const line = (sized: Awaited<typeof sizedP> | null) => {
+  const line = (sized: Awaited<typeof sizedP> | null, small: Awaited<typeof smallP> | null) => {
     const sizedByMint = new Map(ws.map((w, i) => [w.mint, sized?.[i]]));
+    const midByMint = new Map<string, number | null>();
     const rows = ws.map((w, i) => {
       const state = states.get(w.mint) ?? null;
+      const mid = unitPriceAt(small?.[i] ?? null, MID_SIZE_USDC, FEE_BPS, w.decimals, state?.multiplier ?? 1);
+      midByMint.set(w.mint, mid);
       const computed = computeRow({
         wrapper: w,
         legal: legalFor(w.issuer, w.legalId),
@@ -83,7 +97,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
         sell: sized?.[i].sell ?? null,
         sizeUsdc: size,
         feeBps: FEE_BPS,
-        mid: mids.get(w.mint)?.usdPricePerUnit ?? null,
+        mid,
       });
       return computed;
     });
@@ -109,7 +123,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
       redeemTier: row.legal.redeemTier,
       transferFeeBps: row.legal.transferFeeBps,
       powers: row.legal.powers,
-      mid: mids.get(row.wrapper.mint)?.usdPricePerUnit ?? null,
+      mid: midByMint.get(row.wrapper.mint) ?? null,
       impact: row.impact,
       roundTripUsdc: row.roundTripUsdc,
       roundTripPct: row.roundTripPct,
@@ -141,8 +155,15 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   return new Response(
     new ReadableStream({
       async start(ctl) {
-        ctl.enqueue(enc.encode(line(null)));
-        ctl.enqueue(enc.encode(line(await sizedP)));
+        ctl.enqueue(enc.encode(line(null, null)));
+        const sized = await sizedP;
+        // Liquidity sinks rows above 5% impact, so its quoted line waits for the small quotes. No other sort key
+        // depends on impact: there the impact line ranks the same as the quoted line and columns do not move.
+        if (sort === "liquidity") ctl.enqueue(enc.encode(line(sized, await smallP)));
+        else {
+          ctl.enqueue(enc.encode(line(sized, null)));
+          ctl.enqueue(enc.encode(line(sized, await smallP)));
+        }
         ctl.close();
       },
     }),

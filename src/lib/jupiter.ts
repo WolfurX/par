@@ -26,7 +26,7 @@ const TAKER_TTL_MS = 60 * 60 * 1000;
 const MIN_TAKER_LAMPORTS = 10_000_000; // 0.01 SOL: fees plus a Token-2022 ATA rent in simulation
 // Request windows, enforced in acquireSlot. Keyless: live headers on 2026-09-16 showed 5 requests per ~10 s, 429 on
 // the 6th. Keyed: the live gateway uses 10 s windows; a Free key measured 10 per window on 2026-09-19 (429 on the 11th),
-// a Developer key would be 100. JUPITER_WINDOW_CALLS sets this module's share (default 8, leaving 2 for jupprice.ts);
+// a Developer key would be 100. JUPITER_WINDOW_CALLS sets this module's share (default 8, leaving 2 of the 10 spare);
 // raise it to 80 on the Developer tier. Each server process paces itself; there is no cross-process gate.
 const KEYLESS_WINDOW = { ms: 11_000, calls: 5 };
 const KEYED_WINDOW = { ms: 10_000, calls: Math.max(1, Number(process.env.JUPITER_WINDOW_CALLS ?? 8) || 8) };
@@ -297,6 +297,30 @@ function recordDelivery(mint: string, labels: string[], ratio: number): string[]
   excludeForMint(mint, [last]);
   excludedAt.set(`${mint}:${last}`, Date.now());
   return [last];
+}
+/**
+ * ladder() drops a leg that makes the simulation revert for that one build only. A second revert of the same leg on
+ * the same mint within EXCLUSION_TTL_MS records it like a short-pay, so the matrix quote (which honours
+ * excludedDexesFor) stops pricing a leg the buy screen cannot use. One revert alone can be a price that moved during
+ * the simulation, not the leg, so it only arms the record, and a revert under REVERT_MIN_GAP_MS after the arming one is
+ * the same moment (ladder() steps and buildForUser's two ladders run seconds apart) and counts for nothing. A leg
+ * measured good earlier is excluded too: two reverts a minute or more apart outweigh an older good delivery.
+ */
+const REVERT_MIN_GAP_MS = 60_000;
+const revertedAt = new Map<string, number>(); // `${mint}:${label}` -> ms of the arming revert
+export function recordRevert(mint: string, label: string): boolean {
+  const key = `${mint}:${label}`;
+  const first = revertedAt.get(key);
+  if (first === undefined || Date.now() - first > EXCLUSION_TTL_MS) {
+    revertedAt.set(key, Date.now());
+    return false;
+  }
+  if (Date.now() - first < REVERT_MIN_GAP_MS) return false;
+  revertedAt.delete(key);
+  goodLabelsByMint.get(mint)?.delete(label);
+  excludeForMint(mint, [label]);
+  excludedAt.set(key, Date.now());
+  return true;
 }
 function expireExclusions(mint: string): void {
   const set = excludedByMint.get(mint);
@@ -746,6 +770,7 @@ async function ladder(base: BuildParams, mint: string, blockhash: string | undef
     if (!sim.err) return { attempt, ok: true, steps };
     lastReason = describeSimError(sim);
     lastFailingLabel = failingLabel(sim.logs, labels);
+    if (lastFailingLabel && !base.dexes?.length) recordRevert(mint, lastFailingLabel);
     steps.push(`step ${step} route ${build.routePlan.map((r) => r.swapInfo.label).join("+")} failed: ${lastReason}${lastFailingLabel ? ` [${lastFailingLabel}]` : ""}`);
   }
   if (!last) throw new JupiterError(lastReason || "no route", 502, "build");

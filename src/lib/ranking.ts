@@ -23,7 +23,7 @@ export interface RowInput {
   /** USDC size the quotes were taken at. */
   sizeUsdc: number;
   feeBps: number;
-  /** Jupiter Price v3 mid per displayed unit, for impact. */
+  /** Unit price at MID_SIZE_USDC on the same path (unitPriceAt of a small buy quote), for impact. */
   mid: number | null;
 }
 
@@ -58,12 +58,24 @@ export interface RowComputed {
 const THIN_IMPACT = 0.05;
 const CHEAPEST_MIN_VOLUME = 1_000;
 const CHEAPEST_MIN_LIQUIDITY = 25_000;
+/** Size of the small buy quote whose unit price is the mid for impact. */
+export const MID_SIZE_USDC = 10;
+
+/**
+ * Price per displayed unit paid for sizeUsdc through quote, net of our fee on the input. The sized price and the
+ * small-size mid both go through here, so they carry the same Parsec fee and the same issuer transfer fee, and those
+ * cancel in the impact ratio.
+ */
+export function unitPriceAt(quote: QuoteResult | null, sizeUsdc: number, feeBps: number, decimals: number, m: number): number | null {
+  if (!quote || quote.expectedRaw === "0") return null;
+  const outTokens = rawToUnits(quote.expectedRaw, decimals, 1); // raw tokens (no multiplier)
+  return outTokens > 0 ? (sizeUsdc - sizeUsdc * (feeBps / 10_000)) / outTokens / m : null;
+}
 
 export function computeRow(i: RowInput): RowComputed {
   const m = i.state?.multiplier ?? 1;
   const dec = i.wrapper.decimals;
   const S = i.sizeUsdc;
-  const feeUsdc = S * (i.feeBps / 10_000);
   const liquidityUsd = i.pool?.liquidityUsd ?? 0;
   const volume24hUsd = i.pool?.volume24hUsd ?? 0;
   const noLiquidity = liquidityUsd < 1;
@@ -76,11 +88,8 @@ export function computeRow(i: RowInput): RowComputed {
   let deliveryRatio: number | null = null;
 
   if (i.buy && i.buy.expectedRaw !== "0") {
-    const outTokens = rawToUnits(i.buy.expectedRaw, dec, 1); // raw tokens (no multiplier)
-    if (outTokens > 0) {
-      rawPrice = (S - feeUsdc) / outTokens;
-      unitPrice = rawPrice / m;
-    }
+    unitPrice = unitPriceAt(i.buy, S, i.feeBps, dec, m);
+    rawPrice = unitPrice != null ? unitPrice * m : null;
     expectedUnits = rawToUnits(i.buy.expectedRaw, dec, m);
     minimumUnits = rawToUnits(i.buy.minimumRaw, dec, m);
     routeLabels = i.buy.routeLabels;
@@ -92,7 +101,7 @@ export function computeRow(i: RowInput): RowComputed {
   const premiumUsd = premium != null ? S - S / (1 + premium) : null;
 
   const transferFeeBps = i.state?.transferFeeBps ?? i.legal.transferFeeBps;
-  const impact = unitPrice != null && i.mid != null ? Math.max(0, (unitPrice * (1 - transferFeeBps / 10_000)) / i.mid - 1) : null;
+  const impact = unitPrice != null && i.mid != null && i.mid > 0 ? Math.max(0, unitPrice / i.mid - 1) : null;
   const feesInBps = i.feeBps + transferFeeBps;
   const feesOutBps = i.feeBps + transferFeeBps;
 

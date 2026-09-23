@@ -69,8 +69,8 @@ export default function CompanyPage({
       .then(async (r) => {
         if (!r.ok) throw new Error((await r.json()).error ?? r.statusText);
         // A frame only replaces an empty page or another unquoted frame, and once quoted rows are on screen
-        // only the quoted line replaces them, so columns move once. A size or sort change keeps the previous
-        // quoted columns until its own quoted line arrives, as today.
+        // only a quoted line replaces them (the impact line ranks the same), so columns move once. A size or
+        // sort change keeps the previous quoted columns until its own quoted line arrives, as today.
         const lines = r.body!.pipeThrough(new TextDecoderStream()).getReader();
         let buf = "";
         let quoted = false;

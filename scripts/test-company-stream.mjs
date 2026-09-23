@@ -38,6 +38,19 @@ Date.now = () => now;
 
 let orders = 0; // every /swap/v2/order call
 let small = 0; // /swap/v2/order calls at amount=5000000 (the test-3 direct quoteAtSize calls)
+// /order answers by `${inputMint}>${outputMint}:${amount}`; anything else buys 1 token (1e9 raw) or sells for 1,000 USDC.
+const USDC = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+const TOPENAI = "oPAiAikWTaFj9RYoRFD35ccfwhnMcB3ThgBZRHSkjTZ";
+const OPENAI = "PreweJYECqtQwBtpxHL171nL2K6umo692gTm7Q3rpgF";
+const orderOut = {
+  // 10 USDC small buys (the impact mid). tOpenAI: 0.011 token, mid 9.99 / 0.011 = 908.18, impact 999 / 908.18 - 1 = 0.1.
+  // OPENAI: 0.01001001 token, mid 998, impact 999 / 998 - 1 = 0.001001.
+  [`${USDC}>${TOPENAI}:10000000`]: "11000000",
+  [`${USDC}>${OPENAI}:10000000`]: "10010010",
+  // Sells of the 1 token bought at size: tOpenAI gets 999 USDC back (round trip -0.1%), OPENAI 990 (-1%).
+  [`${TOPENAI}>${USDC}:1000000000`]: "999000000",
+  [`${OPENAI}>${USDC}:1000000000`]: "990000000",
+};
 let resolveHeld;
 const held = new Promise((resolve) => (resolveHeld = resolve));
 
@@ -56,7 +69,9 @@ globalThis.fetch = async (input) => {
     orders++;
     if (/[?&]amount=5000000(&|$)/.test(url)) small++;
     await held;
-    return Response.json({ outAmount: "1000000000", otherAmountThreshold: "990000000", routePlan: [] });
+    const q = new URL(url).searchParams;
+    const out = orderOut[`${q.get("inputMint")}>${q.get("outputMint")}:${q.get("amount")}`] ?? "1000000000";
+    return Response.json({ outAmount: out, otherAmountThreshold: out, routePlan: [] });
   }
   throw new TypeError("offline");
 };
@@ -130,7 +145,7 @@ test("the frame line arrives while every sized quote is still outstanding", asyn
   assert.equal(tOpenAI.reference.price, 1100);
 });
 
-test("the second line carries the sized quotes and ends the stream", async () => {
+test("the second line carries the sized quotes, the third adds impact in the same order, then the stream ends", async () => {
   resolveHeld();
   const d = await within(reader(), 3000, "quoted line");
 
@@ -145,8 +160,33 @@ test("the second line carries the sized quotes and ends the stream", async () =>
   const openai = d.rows.find((r) => r.symbol === "OPENAI");
   assert.equal(openai.premium, null);
   assert.equal(openai.belowMark, false);
+  for (const r of d.rows) assert.equal(r.impact, null); // no small quote yet
+
+  // The two small quotes are the 5th and 6th /order calls; keyless pacing (5 per 11 s) holds the 6th one window.
+  const d3 = await within(reader(), 15000, "impact line");
+  assert.equal(d3.quoted, true);
+  assert.deepEqual(d3.rows.map((r) => r.mint), d.rows.map((r) => r.mint));
+  const impactBy = Object.fromEntries(d3.rows.map((r) => [r.symbol, r.impact]));
+  assert.ok(Math.abs(impactBy.tOpenAI - 0.1) < 1e-9, String(impactBy.tOpenAI));
+  assert.ok(Math.abs(impactBy.OPENAI - 0.001001) < 1e-9, String(impactBy.OPENAI));
 
   assert.equal(await reader(), null);
+});
+
+test("Sort by Liquidity: the quoted line already carries impact, so a thin row sinks at once", async () => {
+  // Quotes are cached from the test above. tOpenAI has the better round trip (-0.1% vs -1%) but 10% impact, above
+  // the 5% thin line, so Liquidity must put OPENAI first on the very first quoted line, and no line follows it.
+  const res = await GET(new Request("http://localhost/api/company/openai?sort=liquidity"), { params: Promise.resolve({ id: "openai" }) });
+  const next = lineReader(res);
+  const frame = await within(next(), 3000, "frame line");
+  assert.equal(frame.quoted, false);
+  const d = await within(next(), 3000, "quoted line");
+  assert.equal(d.quoted, true);
+  assert.deepEqual(d.rows.map((r) => r.symbol), ["OPENAI", "tOpenAI"]);
+  const tOpenAI = d.rows.find((r) => r.symbol === "tOpenAI");
+  assert.ok(Math.abs(tOpenAI.impact - 0.1) < 1e-9, String(tOpenAI.impact));
+  assert.equal(tOpenAI.thin, true);
+  assert.equal(await next(), null);
 });
 
 test("a sized quote is served from cache for 120 s", async () => {
