@@ -338,6 +338,17 @@ export async function usPriceAsOf(t: number): Promise<number | null> {
   return ended.length ? Math.floor(Math.max(...ended) / 1000) : null;
 }
 
+/** End of the most recent regular session at or before t, or null without a schedule. */
+export async function usLastRegularClose(t: number): Promise<number | null> {
+  const schedule = await getSchedule().catch(() => null);
+  if (!schedule) return null;
+  const ms = t * 1000;
+  const { y, mo, d } = nyPartsFromMs(ms);
+  const timeline = buildTimeline(schedule.parsed, y, mo, d, 5, 0);
+  const ended = timeline.filter((iv) => iv.session === "regular" && iv.end <= ms).map((iv) => iv.end);
+  return ended.length ? Math.floor(Math.max(...ended) / 1000) : null;
+}
+
 export async function getMarketState(nowSec?: number): Promise<MarketState> {
   const nowMs = (nowSec ?? Math.floor(Date.now() / 1000)) * 1000;
   const schedule = await getSchedule();

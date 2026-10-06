@@ -1,6 +1,7 @@
 // Reproduces the reference-ladder defects fixed in src/lib/reference.ts: an open breaker skipping a
 // healthy rung, ages stamped from our fetch instead of the price, and a cold instance with a closed
-// market having no reference for a public name. No network: fetch and the clock are stubbed.
+// market having no reference for a public name, and a Pyth Core account that stopped updating being
+// served for days. No network: fetch and the clock are stubbed.
 // Run: node --test scripts/test-reference.mjs
 
 import test from "node:test";
@@ -19,6 +20,8 @@ register(
 );
 
 delete process.env.PYTH_PRO_API_KEY;
+delete process.env.HELIUS_API_KEY;
+delete process.env.NEXT_PUBLIC_RPC_URL;
 
 let now = Date.parse("2026-09-20T15:00:00Z");
 Date.now = () => now;
@@ -49,8 +52,25 @@ let xstocksQuote = null;
 let xstocksStatus = 200;
 let xstocksCalls = 0;
 let tickerBody = { symbol: "SPCX.US_USDC" };
+let pythCore = { price: 0, publishTime: 0 };
+let aaplTicker = "0";
 
-globalThis.fetch = async (input) => {
+const AAPL_FEED = "49f6b65cb1de6b10eaf75e7c03ca029c306d0357e91b5311b175084a5ad55688";
+
+// PriceUpdateV2 account data as src/lib/pyth-core.ts reads it: 8 discriminator, 32 write authority,
+// verification tag at 40 (1 = full), feed id 41..72, price i64 at 73, conf u64 at 81, exponent i32 at 89,
+// publish_time i64 at 93.
+function priceUpdateV2(price, publishTime) {
+  const b = Buffer.alloc(134);
+  b[40] = 1;
+  Buffer.from(AAPL_FEED, "hex").copy(b, 41);
+  b.writeBigInt64LE(BigInt(Math.round(price * 1e5)), 73);
+  b.writeInt32LE(-5, 89);
+  b.writeBigInt64LE(BigInt(publishTime), 93);
+  return b.toString("base64");
+}
+
+globalThis.fetch = async (input, init) => {
   const url = String(input);
   if (url.startsWith("https://history.pyth-lazer.dourolabs.app/history/v1/symbols")) {
     return new Response(JSON.stringify([{ symbol: "Equity.US.AAPL/USD", state: "stable", market_session_schedule: SCHEDULE }]), { status: 200 });
@@ -71,6 +91,14 @@ globalThis.fetch = async (input) => {
   if (url === "https://prestocks.com/api/prestocks") {
     return new Response(JSON.stringify([{ symbol: "SPACEX", markPrice: 90 }]), { status: 200 });
   }
+  if (url === "https://api.mainnet-beta.solana.com") {
+    const { id } = JSON.parse(init.body);
+    const value = [{ executable: false, owner: "rec5EKMGg6MxZYaMdyBfgwp4d5rB9T1VQH5pJv5LtFJ", lamports: 1, rentEpoch: 0, data: [priceUpdateV2(pythCore.price, pythCore.publishTime), "base64"] }];
+    return new Response(JSON.stringify({ jsonrpc: "2.0", id, result: { context: { slot: 1 }, value } }), { status: 200 });
+  }
+  if (url.startsWith("https://api.backpack.exchange/api/v1/ticker?symbol=AAPL.US_USDC")) {
+    return new Response(JSON.stringify({ symbol: "AAPL.US_USDC", lastPrice: aaplTicker }), { status: 200 });
+  }
   throw new Error(`unexpected fetch ${url}`);
 };
 
@@ -84,6 +112,8 @@ const spcxx = bySymbol("SPCXx");
 const spcxUs = bySymbol("SPCX.US");
 const tSpaceX = bySymbol("tSpaceX");
 const spaceX = bySymbol("SPACEX");
+const aapl = companyById.get("aapl");
+const aaplx = bySymbol("AAPLx");
 
 test("cold instance, closed market: SPCXx and SPCX.US fall through to the last traded Backpack klines bar", async () => {
   now = Date.parse("2026-09-20T15:00:00Z"); // Sunday 11:00 EDT
@@ -162,4 +192,64 @@ test("open breaker skips its rung and the next healthy rung serves a fresh price
   assert.equal(xstocksCalls, callsBefore);
   assert.equal(r5.price, 154);
   assert.equal(r5.stale, false);
+});
+
+test("regular session: a Pyth Core print 20 minutes old is a miss and the Backpack ticker serves AAPLx", async () => {
+  now = Date.parse("2026-09-22T16:00:00Z"); // Tuesday 12:00 EDT
+  pythCore = { price: 256, publishTime: 1790091600 }; // 2026-09-22T15:40:00Z
+  aaplTicker = "256.4";
+
+  assert.deepEqual(referenceChain(aaplx, aapl), [
+    "pyth-core:49f6b65c",
+    "pyth-pro:922",
+    "backpack:AAPL.US_USDC",
+    "xstocks:AAPLx",
+    "backpack-klines:AAPL.US_USDC",
+  ]);
+
+  const r = await getReference(aaplx, aapl);
+  assert.match(r.source, /^Backpack consolidated US price \(AAPL\.US_USDC/);
+  assert.equal(r.price, 256.4);
+  assert.equal(r.asOf, 1790092800); // 2026-09-22T16:00:00Z
+  assert.equal(r.ageSec, 0);
+  assert.equal(r.stale, false);
+});
+
+test("regular session: a Pyth Core print 2 minutes old serves AAPLx", async () => {
+  now = Date.parse("2026-09-22T17:00:00Z"); // Tuesday 13:00 EDT
+  pythCore = { price: 257.5, publishTime: 1790096280 }; // 2026-09-22T16:58:00Z
+  aaplTicker = "257.9";
+
+  const r = await getReference(aaplx, aapl);
+  assert.match(r.source, /^Pyth Core on-chain account, verification full/);
+  assert.equal(r.price, 257.5);
+  assert.equal(r.asOf, 1790096280);
+  assert.equal(r.ageSec, 120);
+  assert.equal(r.pythMark, true);
+  assert.equal(r.stale, false);
+});
+
+test("closed market: a Pyth Core print from the Friday 16:00 ET close still serves AAPLx on Saturday", async () => {
+  now = Date.parse("2026-09-26T15:00:00Z"); // Saturday 11:00 EDT
+  pythCore = { price: 258.5, publishTime: 1790366400 }; // 2026-09-25T20:00:00Z, Friday 16:00 EDT
+  aaplTicker = "258.8"; // decoy
+
+  const r = await getReference(aaplx, aapl);
+  assert.match(r.source, /^Pyth Core on-chain account/);
+  assert.equal(r.price, 258.5);
+  assert.equal(r.asOf, 1790366400);
+  assert.equal(r.ageSec, 68400);
+});
+
+test("closed market: a Pyth Core print 7 days old is a miss and the Backpack ticker serves AAPLx", async () => {
+  now = Date.parse("2026-09-27T15:00:00Z"); // Sunday 11:00 EDT
+  pythCore = { price: 250, publishTime: 1789916400 }; // 2026-09-20T15:00:00Z, decoy
+  aaplTicker = "255.5";
+
+  const r = await getReference(aaplx, aapl);
+  assert.match(r.source, /^Backpack consolidated US price \(AAPL\.US_USDC/);
+  assert.equal(r.price, 255.5);
+  assert.equal(r.asOf, 1790380800); // 2026-09-26T00:00:00Z, Friday 20:00 EDT, end of the last session
+  assert.equal(r.ageSec, 140400);
+  assert.equal(r.stale, false);
 });

@@ -12,7 +12,10 @@
 // Ages. Pyth Core, Pyth Pro and the klines bar carry their own time. The ticker and the xStocks quote
 // carry none, so they date from our fetch while a US session is running and from the end of the last
 // session otherwise (src/lib/sessions.ts); Pyth Pro equity times get the same cap. Tessera and PreStocks
-// publish no time for their marks, so asOf and ageSec are null on those rows.
+// publish no time for their marks, so asOf and ageSec are null on those rows. A Pyth Core print older
+// than 15 minutes while any US session runs, or from before the last regular close while the market is
+// closed (2 hours without a schedule), is a miss: the next rung serves, the breaker is untouched and the
+// value is not kept as last-good; the AAPL account sat on a 2026-09-28 print on 2026-10-06.
 //
 // Pre-IPO names (Tessera, PreStocks) have no ladder: the issuer's own mark is the only reference that
 // means anything, so the row fails to its last-good value rather than to somebody else's number.
@@ -26,7 +29,7 @@
 import type { Company, Reference, ReferenceSource, Wrapper } from "./types";
 import { wrappers } from "./registry";
 import { readPythCoreOne } from "./pyth-core";
-import { usPriceAsOf } from "./sessions";
+import { usLastRegularClose, usPriceAsOf } from "./sessions";
 
 const TESSERA_URL = "https://rest-api.tessera.pe/v1/public/token-details?symbol=x";
 const PRESTOCKS_URL = "https://prestocks.com/api/prestocks";
@@ -47,6 +50,9 @@ const BREAKER_WINDOW_SEC = 60;
 const UNENTITLED_SEC = 3600;
 
 const KLINES_LOOKBACK_SEC = 4 * 86400; // reaches back over a weekend plus a Monday holiday
+
+const PYTH_CORE_MAX_AGE_SEC = 15 * 60; // while any US session prints
+const PYTH_CORE_MAX_AGE_NO_SCHEDULE_SEC = 2 * 3600; // when sessions cannot answer
 
 interface Fetched {
   price: number;
@@ -78,6 +84,9 @@ const inflight = new Map<string, Promise<unknown>>();
 
 /** No upstream call was made: the previous one failed and its cooldown has not run out. Not a failure. */
 class CooldownError extends Error {}
+
+/** The upstream answered, but its content is too old to serve. Not a failure, and never kept as last-good. */
+class StaleError extends Error {}
 
 async function cached<T>(key: string, ttlSec: number, run: () => Promise<T>): Promise<T> {
   const t = Date.now() / 1000;
@@ -121,8 +130,8 @@ async function attempt(key: string, run: () => Promise<Fetched>, errors: string[
     return value;
   } catch (e) {
     errors.push(`${key}: ${e instanceof Error ? e.message : String(e)}`);
-    // A cooldown rejection means we never called the upstream, so it cannot count as a failed call.
-    if (e instanceof CooldownError) return null;
+    // A cooldown rejection means we never called the upstream, and a stale read means it answered, so neither counts as a failed call.
+    if (e instanceof CooldownError || e instanceof StaleError) return null;
     const n = (failures.get(key) ?? 0) + 1;
     if (n >= BREAKER_FAILURES) {
       openUntil.set(key, now + BREAKER_WINDOW_SEC);
@@ -263,9 +272,26 @@ async function backpackKlinesRef(symbol: string): Promise<Fetched> {
   });
 }
 
+const staleLoggedAt = new Map<string, number>(); // feed id -> last warning, one per feed per hour
+
 async function pythCoreRef(feedId: string, shard?: number): Promise<Fetched> {
   const p = await readPythCoreOne(feedId, { shard });
   if (!p) throw new Error(`pyth core: no account for feed ${feedId.slice(0, 8)} on shard ${shard ?? 1}`);
+  const now = nowSec();
+  // usPriceAsOf answers now itself while a session prints (and for the first second after one ends),
+  // the end of the last session when closed, null without a schedule.
+  let oldest = now - PYTH_CORE_MAX_AGE_NO_SCHEDULE_SEC;
+  const printing = await usPriceAsOf(now);
+  if (printing === now) oldest = now - PYTH_CORE_MAX_AGE_SEC;
+  else if (printing !== null) oldest = (await usLastRegularClose(now)) ?? oldest;
+  if (p.publishTime < oldest) {
+    const age = now - p.publishTime;
+    if (now - (staleLoggedAt.get(feedId) ?? 0) >= 3600) {
+      staleLoggedAt.set(feedId, now);
+      console.warn(`[reference] pyth core feed ${feedId.slice(0, 8)}: print is ${age} s old, treating it as a miss`);
+    }
+    throw new StaleError(`pyth core feed ${feedId.slice(0, 8)}: print is ${age} s old`);
+  }
   return {
     price: p.price,
     asOf: p.publishTime,
