@@ -74,6 +74,12 @@ export default function LabelPage({
   const { publicKey, signTransaction, connected } = useWallet();
   const [size, setSize] = useState(initialSize);
   const [sizeInput, setSizeInput] = useState(String(initialSize));
+  // A search-param-only navigation (the command line on this same company) keeps this component's state; follow the URL.
+  useEffect(() => {
+    const n = Math.min(1_000_000, Math.max(1, Number(sp.size) || 1000));
+    setSize(n);
+    setSizeInput(String(n));
+  }, [sp.size]);
   const [side, setSide] = useState<Side>("buy");
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [data, setData] = useState<LabelPayload | null>(null);

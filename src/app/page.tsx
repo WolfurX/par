@@ -1,8 +1,14 @@
 import TickerField from "@/components/TickerField";
+import { legalFor } from "@/lib/legal";
+import { companyById, wrappersForCompany } from "@/lib/registry";
 import "./landing.css";
+
+const issuerName: Record<string, string> = { xstocks: "xStocks (Backed)", ondo: "Ondo", backpack: "Backpack", tessera: "Tessera", prestocks: "PreStocks" };
 
 export default function LandingPage() {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "/companies";
+  const demo = companyById.get("openai")!;
+  const demoWrappers = wrappersForCompany(demo.id);
 
   return (
     <div className="landing">
@@ -24,25 +30,20 @@ export default function LandingPage() {
             </div>
           </section>
 
-          <section className="landing-how">
-            <div className="landing-wrap">
-              <p className="landing-kicker">How it works</p>
-              <div className="landing-steps">
-                <div className="landing-step">Find every wrapper of a company.</div>
-                <div className="landing-step">Compare them at your size.</div>
-                <div className="landing-step">Sign in your own wallet.</div>
-              </div>
-            </div>
-          </section>
-
-          <section className="landing-how">
-            <div className="landing-wrap">
-              <p className="landing-kicker">What it shows</p>
-              <div className="landing-steps">
-                <div className="landing-step">Pre-IPO tokens against their issuer&apos;s own mark, including Tessera&apos;s tOpenAI, tKalshi and tSpaceX.</div>
-                <div className="landing-step">The round trip at your size, with every fee on its own line.</div>
-                <div className="landing-step">What each token legally is, and who can freeze or move it.</div>
-                <div className="landing-step">Every token pinned by mint address, so look-alikes stay out.</div>
+          <section className="landing-term">
+            <div className="landing-panel">
+              <div className="landing-panel-title">parsec</div>
+              <div className="landing-panel-body">
+                <p>
+                  &gt; <span className="landing-type">openai 1000</span>
+                </p>
+                <div className="landing-frame">
+                  <p>{`${demo.name}  ${demo.kind}`}</p>
+                  {demoWrappers.map((w) => (
+                    <p key={w.symbol}>{`${w.symbol}  ${issuerName[w.issuer]}  ${legalFor(w.issuer, w.legalId).form}`}</p>
+                  ))}
+                </div>
+                <p className="landing-frame-end">prices load in the app</p>
               </div>
             </div>
           </section>

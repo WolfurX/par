@@ -1,8 +1,14 @@
 import Link from "next/link";
 import { WalletContext } from "@/components/WalletProvider";
+import { companies, wrappersForCompany } from "@/lib/registry";
+import CommandLine from "./CommandLine";
+import type { CommandCompany } from "./command-parse";
+import StatusStrip from "./StatusStrip";
 import WalletButton from "./WalletButton";
 
 const FEE_BPS = Number(process.env.FEE_BPS ?? 10);
+// Only what the command line resolves against crosses to the client: no mints, feeds or references.
+const cmdCompanies: CommandCompany[] = companies.map((c) => ({ id: c.id, name: c.name, ticker: c.ticker, wrappers: wrappersForCompany(c.id).map((w) => w.symbol) }));
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -11,7 +17,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <link
         rel="stylesheet"
         precedence="default"
-        href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"
+        href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
       />
       <header className="titlebar">
         <div className="titlebar-in">
@@ -22,9 +28,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <Link href="/companies">Companies</Link>
             <Link href="/portfolio">Portfolio</Link>
           </nav>
+          <CommandLine companies={cmdCompanies} />
           <WalletButton />
         </div>
       </header>
+      <StatusStrip />
       <div className="page">
         {children}
         <footer className="site-footer">

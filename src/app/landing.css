@@ -103,17 +103,31 @@ html:has(.landing){color-scheme:light;background:#f7f6f1}
   color: var(--muted);
 }
 
- /* how it works */
-.landing-how { padding: 7rem 0 6rem; }
-.landing-steps { border-top: 1px solid var(--rule); }
-.landing-step {
-  border-bottom: 1px solid var(--rule);
-  padding: 1.45rem 0;
-  font-family: var(--display); font-weight: 500;
-  font-size: clamp(1.15rem, 2.3vw, 1.65rem);
-  letter-spacing: -.01em;
+ /* terminal panel: types the command, then prints its frame from registry data */
+.landing-term { padding: 7rem 16px 6rem; }
+.landing-panel {
+  max-width: 720px; margin: 0 auto;
+  border: 1px solid var(--rule);
+  background: var(--ground);
+  font-family: var(--mono); font-size: 13px; line-height: 1.55;
   color: var(--ink);
 }
+.landing-panel-title {
+  padding: 4px 12px;
+  background: var(--ground2);
+  border-bottom: 1px solid var(--rule);
+  font-size: 11.5px; letter-spacing: .18em; color: var(--muted);
+}
+.landing-panel-body { padding: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.landing-panel-body p { margin: 0 0 6px; }
+.landing-type {
+  display: inline-block; width: 0; overflow: hidden; white-space: nowrap; vertical-align: bottom;
+  animation: landing-type 1.1s steps(11, end) .3s forwards;
+}
+.landing-frame { opacity: 0; animation: landing-show 0s linear 1.6s forwards; }
+.landing-frame-end { opacity: 0; animation: landing-show 0s linear 2.4s forwards; }
+@keyframes landing-type { to { width: 11ch; } }
+@keyframes landing-show { to { opacity: 1; } }
 
  /* issuers */
 .landing-issuers { padding: 5rem 0 6rem; }
@@ -139,10 +153,12 @@ html:has(.landing){color-scheme:light;background:#f7f6f1}
 
 @media (prefers-reduced-motion: reduce) {
   .landing-launch { transition: none; }
+  .landing-type { width: auto; }
+  .landing-frame, .landing-frame-end { opacity: 1; }
 }
 @media (max-width: 640px) {
   .landing-header { height: 56px; }
   .landing-hero { padding-top: 4.5rem; }
-  .landing-how { padding: 5rem 0 4rem; }
+  .landing-term { padding: 5rem 16px 4rem; }
   .landing-issuers { padding: 3.5rem 0 4.5rem; }
 }

@@ -56,6 +56,13 @@ export default function CompanyPage({
   const [sort, setSort] = useState<Intent>(() => (INTENTS.some((i) => i.id === sp.sort) ? (sp.sort as Intent) : "price"));
   const [size, setSize] = useState(() => Math.min(1_000_000, Math.max(1, Number(sp.size) || 1000)));
   const [sizeInput, setSizeInput] = useState(() => String(size));
+  // A search-param-only navigation (the command line on this same company) keeps this component's state; follow the URL.
+  useEffect(() => {
+    const n = Math.min(1_000_000, Math.max(1, Number(sp.size) || 1000));
+    setSize(n);
+    setSizeInput(String(n));
+    setSort(INTENTS.some((i) => i.id === sp.sort) ? (sp.sort as Intent) : "price");
+  }, [sp.size, sp.sort]);
   const [data, setData] = useState<Payload | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [spark, setSpark] = useState<Record<string, number[]>>({});

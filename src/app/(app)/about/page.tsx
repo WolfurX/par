@@ -4,7 +4,7 @@ export const metadata = { title: "About" };
 
 export default function AboutPage() {
   return (
-    <main>
+    <main className="prose">
       <h1>What Parsec is</h1>
       <p>
         A company&apos;s tokens on Solana, public or pre-IPO, side by side at your size: the premium to each token&apos;s reference, the full

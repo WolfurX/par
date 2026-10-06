@@ -19,9 +19,9 @@ html, body { margin: 0; padding: 0; }
 body {
   background: var(--ground);
   color: var(--ink);
-  font-family: var(--sans);
-  font-size: 15.5px;
-  line-height: 1.5;
+  font-family: var(--mono);
+  font-size: 14px;
+  line-height: 1.45;
   font-variant-numeric: tabular-nums;
 }
 a { color: var(--accent); text-decoration: none; border-bottom: 1px solid var(--rule-strong); }
@@ -31,14 +31,22 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; }
 
 .page { max-width: 940px; margin: 0 auto; padding: 28px 20px 80px; }
 .page p { max-width: 74ch; }
+.prose p:not(.mono) { font-family: var(--sans); font-size: 15px; line-height: 1.5; }
 
 .titlebar { background: var(--ground2); border-bottom: 1px solid var(--rule); }
-.titlebar-in { max-width: 940px; margin: 0 auto; padding: 0 20px; height: 56px; display: flex; align-items: center; gap: 12px; }
+.titlebar-in { max-width: 940px; margin: 0 auto; padding: 0 20px; min-height: 44px; display: flex; flex-wrap: wrap; align-items: center; gap: 0 12px; }
 .titlebar .wordmark { font-family: var(--font-archivo), var(--sans); font-weight: 800; font-size: 15px; letter-spacing: .3em; text-indent: .3em; text-transform: uppercase; color: var(--ink); border: 0; display: inline-flex; align-items: center; min-height: 44px; }
-.titlebar nav { display: flex; gap: 16px; font-size: 14px; margin-right: auto; }
+.titlebar nav { display: flex; gap: 16px; font-size: 13px; margin-right: auto; }
 .titlebar nav a { border: 0; color: var(--muted); display: inline-flex; align-items: center; min-height: 44px; }
 .titlebar nav a:hover { color: var(--accent); }
-@media (min-width: 641px) { .titlebar-in { height: 64px; } }
+.cmd { position: relative; flex: 1 1 100%; order: 1; padding-bottom: 6px; }
+.cmd input { width: 100%; min-height: 44px; font-size: 13px; padding: 0 9px; }
+.cmd-msg { position: absolute; left: 0; right: 0; top: 100%; margin: 0; padding: 3px 9px; font-size: 12px; color: var(--muted); background: var(--ground2); border-bottom: 1px solid var(--rule); z-index: 2; }
+.cmd-msg:empty { padding: 0; border: 0; }
+@media (min-width: 641px) { .titlebar-in { height: 44px; flex-wrap: nowrap; } .cmd { flex: 1 1 auto; order: 0; padding: 0; min-width: 0; } .cmd input { min-height: 0; height: 32px; } .titlebar .wallet-adapter-button-trigger { min-height: 32px !important; } }
+.statusbar { border-bottom: 1px solid var(--rule); }
+.statusbar-in { max-width: 940px; margin: 0 auto; padding: 0 20px; min-height: 28px; line-height: 28px; display: flex; flex-wrap: wrap; align-items: center; gap: 0 16px; font-size: 12px; color: var(--muted); }
+.statusbar-in .pow { margin-left: auto; }
 h1 { font-family: var(--font-archivo), var(--sans); font-size: 26px; font-weight: 700; line-height: 1.15; margin: 0 0 10px; letter-spacing: -0.01em; text-wrap: balance; }
 h1 .mono { font-weight: 500; }
 h2 { font-size: 18px; font-weight: 600; margin: 32px 0 10px; }
@@ -73,22 +81,19 @@ table.kv td.v .detail { display: block; font-family: var(--sans); font-size: 13p
 .label > dd .detail { display: block; font-family: var(--sans); font-size: 13px; color: var(--muted); }
 
 .row-list { border-top: 1px solid var(--rule-strong); }
-.row { display: grid; grid-template-columns: 22px 1fr; gap: 2px 10px; padding: 12px 10px; border-bottom: 1px solid var(--rule); }
+.row { display: grid; grid-template-columns: 3ch minmax(0, 1fr) auto auto auto; grid-auto-flow: row dense; gap: 0 10px; align-items: center; padding: 4px 10px; border-bottom: 1px solid var(--rule); }
 .row:nth-child(even) { background: #f2f0ea; }
-.row .rank { font-family: var(--mono); color: var(--muted); font-size: 13px; padding-top: 2px; }
-.row .head { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; }
+.row:focus-within { background: var(--hover); }
+.row .rank { color: var(--muted); }
 .row .sym { font-family: var(--mono); font-size: 15px; }
-.row .issuer { color: var(--muted); font-size: 13px; }
-.row .nums { font-family: var(--mono); font-size: 13px; display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 4px 0; }
+.row .name { justify-self: start; }
+.row .act { justify-self: end; white-space: nowrap; }
+.row .syms { grid-column: 2 / -1; white-space: pre-wrap; }
 .row .own { font-size: 13px; color: var(--muted); margin-top: 6px; max-width: 64ch; }
-.row .act { grid-column: 1 / -1; margin-top: 8px; font-size: 13px; }
 .row .act div { margin-bottom: 3px; }
-@media (min-width: 641px) {
-  .row { grid-template-columns: 30px 1fr 258px; gap: 4px 14px; align-items: start; }
-  .row .act { grid-column: auto; text-align: right; margin-top: 0; }
-}
+@media (min-width: 641px) { .row { grid-template-columns: 3ch minmax(0, 1fr) 6ch 7ch minmax(0, 2fr) 10ch; padding: 0 10px; min-height: 32px; } .row .syms { grid-column: auto; } }
 
-button, .btn { font: inherit; font-size: 14px; padding: 8px 14px; background: var(--accent-fill); color: var(--ink); border: 1px solid var(--accent-fill); border-radius: 2px; cursor: pointer; }
+button, .btn { font: inherit; font-size: 13px; padding: 8px 14px; background: var(--accent-fill); color: var(--ink); border: 1px solid var(--accent-fill); border-radius: 2px; cursor: pointer; }
 button.secondary, .btn.secondary { background: transparent; color: var(--ink); border-color: var(--ink); }
 button:disabled { opacity: 0.5; cursor: default; }
 input, select { font: inherit; font-size: 14px; padding: 7px 9px; background: transparent; color: var(--ink); border: 1px solid var(--rule-strong); border-radius: 2px; }
@@ -99,10 +104,10 @@ input, select { font: inherit; font-size: 14px; padding: 7px 9px; background: tr
 .seg button[aria-pressed="true"] { background: var(--ink); color: var(--ground); }
 
 /* Wallet Standard connect button: match the page, not the adapter's purple default */
-.wallet-adapter-button, .wallet-adapter-button-trigger { font-family: var(--sans) !important; font-size: 14px !important; font-weight: 500 !important; height: auto !important; min-height: 44px !important; line-height: 1.2 !important; padding: 8px 14px !important; background: var(--ground) !important; color: var(--ink) !important; border: 1px solid var(--rule-strong) !important; border-radius: 2px !important; }
+.wallet-adapter-button, .wallet-adapter-button-trigger { font-family: var(--mono) !important; font-size: 13px !important; font-weight: 500 !important; height: auto !important; min-height: 44px !important; line-height: 1.2 !important; padding: 8px 14px !important; background: var(--ground) !important; color: var(--ink) !important; border: 1px solid var(--rule-strong) !important; border-radius: 2px !important; }
 .wallet-adapter-button:hover, .wallet-adapter-button-trigger:hover { border-color: var(--ink) !important; background: var(--ground) !important; }
 .wallet-adapter-button-start-icon { display: none !important; }
-.wallet-adapter-modal-wrapper { background: var(--ground) !important; color: var(--ink) !important; border: 1px solid var(--rule-strong) !important; border-radius: 2px !important; box-shadow: none !important; font-family: var(--sans) !important; }
+.wallet-adapter-modal-wrapper { background: var(--ground) !important; color: var(--ink) !important; border: 1px solid var(--rule-strong) !important; border-radius: 2px !important; box-shadow: none !important; font-family: var(--mono) !important; }
 .wallet-adapter-modal-title { color: var(--ink) !important; font-weight: 600 !important; font-size: 18px !important; }
 .wallet-adapter-modal-list .wallet-adapter-button { border: 0 !important; border-bottom: 1px solid var(--rule) !important; border-radius: 0 !important; }
 .wallet-adapter-modal-button-close { background: transparent !important; border-radius: 2px !important; }
@@ -112,17 +117,20 @@ input, select { font: inherit; font-size: 14px; padding: 7px 9px; background: tr
 .wallet-adapter-modal-list-more svg { fill: var(--ink) !important; }
 .wallet-adapter-modal-middle-button { background: var(--accent-fill) !important; color: var(--ink) !important; border-radius: 2px !important; font-size: 15px !important; }
 .wallet-adapter-dropdown-list { background: var(--ground) !important; border: 1px solid var(--rule-strong) !important; border-radius: 2px !important; box-shadow: none !important; }
-.wallet-adapter-dropdown-list-item { color: var(--ink) !important; font-family: var(--sans) !important; border-radius: 0 !important; }
+.wallet-adapter-dropdown-list-item { color: var(--ink) !important; font-family: var(--mono) !important; border-radius: 0 !important; }
 .wallet-adapter-dropdown-list-item:hover { background: var(--hover) !important; }
 
-footer.site-footer { margin-top: 56px; padding-top: 14px; border-top: 1px solid var(--rule); font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+footer.site-footer { margin-top: 56px; padding-top: 14px; border-top: 1px solid var(--rule); font-family: var(--sans); font-size: 12.5px; color: var(--muted); line-height: 1.5; }
 footer.site-footer p { margin: 0 0 8px; }
 
 @media (max-width: 480px) {
-  body { font-size: 15px; }
   .label { grid-template-columns: 9ch 1fr; }
   .page { padding: 20px 14px 64px; }
+  .prose td { overflow-wrap: anywhere; }
   .titlebar-in { padding: 0 14px; gap: 10px; }
+  .cmd input { font-size: 16px; }
+  .statusbar-in { padding: 0 14px; font-size: 11.5px; line-height: 22px; min-height: 22px; }
+  .statusbar-in > span:first-child { flex: 1 1 100%; }
   button, .btn, input, .seg button { min-height: 44px; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
@@ -130,10 +138,10 @@ footer.site-footer p { margin: 0 0 8px; }
 /* review notes 2026-09-19: phone title bar room, 44 px Compare links, no purple glyph in the wallet modal */
 .wallet-adapter-modal-middle svg { filter: grayscale(1); }
 @media (max-width: 480px) {
-  .titlebar nav { gap: 8px; }
+  .titlebar nav { gap: 8px; font-size: 12px; }
   .titlebar .wordmark { letter-spacing: 0.22em; text-indent: 0.22em; }
-  .wallet-adapter-button, .wallet-adapter-button-trigger { padding: 8px 10px !important; white-space: nowrap !important; }
-  .row .act a { display: inline-flex; align-items: center; min-height: 44px; }
+  .wallet-adapter-button, .wallet-adapter-button-trigger { padding: 8px 10px !important; white-space: nowrap !important; font-size: 12px !important; }
+  .row .name, .row .act { display: inline-flex; align-items: center; min-height: 44px; }
 }
 
 .chart { margin: 12px 0 16px; }
@@ -171,6 +179,7 @@ footer.site-footer p { margin: 0 0 8px; }
 .sum .amt { font-family: var(--font-archivo), var(--sans); font-weight: 700; }
 .details { border-top: 1px solid var(--rule); margin: 14px 0 0; }
 .details > summary { color: var(--muted); cursor: pointer; padding: 10px 0; min-height: 44px; }
+.details > summary + p { font-family: var(--sans); }
 
 .spark { display: block; width: 100%; height: 28px; display: block; }
 .spark-line { fill: none; stroke: var(--muted); stroke-width: 1.5; }
