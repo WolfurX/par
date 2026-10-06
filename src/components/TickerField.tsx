@@ -13,7 +13,7 @@ import * as THREE from "three";
 import { companies, wrappers } from "@/lib/registry";
 
 const COMPANIES = companies.map((c) => c.ticker ?? c.id.toUpperCase());
-const WRAPPERS = wrappers.map((w) => w.symbol);
+const WRAPPERS = wrappers.filter((w) => w.market !== "none").map((w) => w.symbol);
 
 interface Atlas {
   tex: THREE.CanvasTexture;

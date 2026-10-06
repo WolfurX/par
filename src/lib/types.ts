@@ -32,6 +32,8 @@ export interface Wrapper {
   pythRedemptionRateProId?: number;
   /** Legal line id in legal.ts (defaults to the issuer). */
   legalId?: string;
+  /** "none" when no venue trades it (checked 2026-10-06): hidden from company lists, the matrix and the command line; holders still get the label. */
+  market?: "none";
 }
 
 export type ReferenceSource =

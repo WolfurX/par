@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { WalletContext } from "@/components/WalletProvider";
-import { companies, wrappersForCompany } from "@/lib/registry";
+import { companies, listedWrappersForCompany } from "@/lib/registry";
 import CommandLine from "./CommandLine";
 import type { CommandCompany } from "./command-parse";
 import StatusStrip from "./StatusStrip";
@@ -8,7 +8,7 @@ import WalletButton from "./WalletButton";
 
 const FEE_BPS = Number(process.env.FEE_BPS ?? 10);
 // Only what the command line resolves against crosses to the client: no mints, feeds or references.
-const cmdCompanies: CommandCompany[] = companies.map((c) => ({ id: c.id, name: c.name, ticker: c.ticker, wrappers: wrappersForCompany(c.id).map((w) => w.symbol) }));
+const cmdCompanies: CommandCompany[] = companies.map((c) => ({ id: c.id, name: c.name, ticker: c.ticker, wrappers: listedWrappersForCompany(c.id).map((w) => w.symbol) }));
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (

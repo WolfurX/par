@@ -33,6 +33,10 @@ const targets = [
   // instruments (Tessera loan participation, PreStocks SPV) and must have a one-source chain anyway.
   { symbol: "tSpaceX", expect: "Tessera mark only; chain must be one entry, no SPCX equity fallback" },
   { symbol: "SPACEX", expect: "PreStocks mark only; chain must be one entry, no SPCX equity fallback" },
+  { symbol: "CRCLx", expect: "Backpack consolidated US price CRCL.US_USDC, about 84 on 2026-10-06; no Core account on shard 1" },
+  { symbol: "SKHY.US", expect: "Backpack consolidated US price SKHY.US_USDC, about 190 on 2026-10-06; no Core account on shard 1" },
+  { symbol: "MSTR.US", expect: "Pyth Core on-chain account KDQSrjsiur6YxyuY4veB7Gd13MKhwNoMZTQWvx1c93S, about 165 on 2026-10-06" },
+  { symbol: "HOODx", expect: "Backpack consolidated US price HOOD.US_USDC, about 114 on 2026-10-06; no Core account on shard 1" },
 ];
 
 // A pre-IPO wrapper must never carry a fallback rung, whatever its company's kind is.

@@ -12,6 +12,10 @@ const targets = [
   { label: "AAPLx", symbol: "AAPLx", expect: "about 600K liquidity across 18 pools" },
   { label: "SPCX.US", symbol: "SPCX.US", expect: "no expectation given" },
   { label: "AAPLon", symbol: "AAPLon", expect: "near 0 liquidity" },
+  { label: "CRCLx", symbol: "CRCLx", expect: "about 3.3M liquidity on 2026-10-06" },
+  { label: "SKHY.US", symbol: "SKHY.US", expect: "about 2.5M liquidity on 2026-10-06" },
+  { label: "MSTR.US", symbol: "MSTR.US", expect: "about 310K liquidity on 2026-10-06" },
+  { label: "HOODx", symbol: "HOODx", expect: "about 1.45M liquidity on 2026-10-06" },
 ];
 
 const mints = [];
@@ -65,7 +69,7 @@ console.log(`\n--- Forced Jupiter fallback (DexScreener host overridden to fail)
 // hostname instead hangs on DNS for tens of seconds, which is not what we want here.
 process.env.DEXSCREENER_BASE_OVERRIDE = "http://127.0.0.1:1";
 
-// Distinct mints from the 5 targets above (still fresh in the cache) so this
+// Distinct mints from the targets above (still fresh in the cache) so this
 // call cannot serve a cached DexScreener result and actually hits the fallback.
 const fallbackMints = [bySymbol("TSLAx")?.mint, bySymbol("NVDAx")?.mint].filter(Boolean);
 const f0 = Date.now();

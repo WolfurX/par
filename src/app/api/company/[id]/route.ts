@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { companyById, wrappersForCompany } from "@/lib/registry";
+import { companyById, listedWrappersForCompany } from "@/lib/registry";
 import { legalFor, companyNotes } from "@/lib/legal";
 import { getMintStates } from "@/lib/rpc";
 import { getReference, getPythIndex } from "@/lib/reference";
@@ -29,7 +29,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   const sortParam = url.searchParams.get("sort");
   const sort: Intent = INTENTS.some((i) => i.id === sortParam) ? (sortParam as Intent) : "price";
 
-  const ws = wrappersForCompany(id);
+  const ws = listedWrappersForCompany(id);
   const mints = ws.map((w) => w.mint);
   const poolsP = getPools(mints).catch(() => new Map());
   const sizedP = poolsP.then((pools) =>

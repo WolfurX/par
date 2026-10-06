@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
-import { companies, wrappersForCompany } from "@/lib/registry";
+import { companies, listedWrappersForCompany } from "@/lib/registry";
 
 // Arrow Up/Down move between rows in DOM order, from any link in a row or from the search box (i is -1 there,
 // so ArrowDown lands on row 1). Enter is the link's own activation; no tabindex, so Tab order and clicks are untouched.
@@ -42,7 +42,7 @@ export default function Home() {
         </div>
         <div className="row-list">
           {list.map((c, i) => {
-            const ws = wrappersForCompany(c.id);
+            const ws = listedWrappersForCompany(c.id);
             return (
               <div className="row" key={c.id}>
                 <span className="rank">{i + 1}</span>
