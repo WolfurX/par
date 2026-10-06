@@ -298,47 +298,42 @@ export default function CompanyPage({
 
   return (
     <main>
-      <h1>
-        {c.name} {c.ticker ? <span className="mono muted">{c.ticker}</span> : null}
-      </h1>
-      <p className="small muted">
-        {c.kind === "public" ? "Listed company." : "Private company. Each issuer publishes its own mark; there is no exchange price."}{" "}
-        {data.market ? <span>US market: {data.market.text}.</span> : null}
-      </p>
-      {priced.length >= 2 ? (
-        <p>
-          <b className="mono">
+      <header className="head">
+        <h1>
+          {c.name} <span className="tick">{c.kind === "private" ? "private" : c.ticker}</span>
+        </h1>
+        {priced.length >= 2 ? (
+          <p className="range">
             {fmtUsd(Math.min(...priced.map((r) => r.unitPrice!)))} to {fmtUsd(Math.max(...priced.map((r) => r.unitPrice!)))} USD across{" "}
-            {new Set(priced.map((r) => r.issuer)).size} issuers.
-          </b>{" "}
-          <span className="muted">Compare {data.rows.length} wrappers below.</span>
-        </p>
-      ) : !data.quoted && data.rows.length >= 2 ? (
-        <p className="muted">Quoting {data.rows.length} wrappers at {fmtUsd(data.size, 0)} USDC.</p>
-      ) : null}
-      <dl className="label">
+            {new Set(priced.map((r) => r.issuer)).size} issuers
+          </p>
+        ) : !data.quoted && data.rows.length >= 2 ? (
+          <p className="range muted">Quoting {data.rows.length} wrappers at {fmtUsd(data.size, 0)} USDC</p>
+        ) : null}
+      </header>
+      <dl className="label refs">
         {uniqueRefs.map((r) => (
           <Fragment key={r.source}>
-            <dt>Reference</dt>
+            <dt>{r.source}</dt>
             <dd>
-              {fmtUsd(r.price)} USD <span className="detail">{r.source}, {fmtAge(r.ageSec)}{r.stale ? ", served from cache" : ""}{r.pythMark ? <span className="pyth-mark">PYTH</span> : null}</span>
+              {fmtUsd(r.price)} USD <span className="muted">{fmtAge(r.ageSec)}{r.stale ? ", served from cache" : ""}</span>{r.pythMark ? <span className="pyth-mark">PYTH</span> : null}
             </dd>
           </Fragment>
         ))}
         {data.index ? (
           <>
-            <dt>Index</dt>
+            <dt>{data.index.label}</dt>
             <dd>
-              {fmtUsd(data.index.price)} USD <span className="detail">{data.index.label}<span className="pyth-mark">PYTH</span></span>
+              {fmtUsd(data.index.price)} USD <span className="muted">{fmtAge(now - data.index.asOf)}</span><span className="pyth-mark">PYTH</span>
             </dd>
           </>
         ) : null}
+        {c.kind === "private" ? <dd className="muted trail">Private company. Each issuer publishes its own mark; there is no exchange price.</dd> : null}
       </dl>
 
       <div className="strip">
-        <label className="small muted" htmlFor="size">Size, USDC</label>
+        <label className="small muted" htmlFor="size">size, USDC</label>
         <input id="size" inputMode="decimal" value={sizeInput} onChange={(e) => setSizeInput(e.target.value)} onBlur={() => commitSize(sizeInput)} style={{ width: "9em" }} />
-        <span className="small muted">Sort by</span>
         <div className="seg" role="group" aria-label="Sort by">
           {INTENTS.map((it) => (
             <button key={it.id} aria-pressed={sort === it.id} onClick={() => updateSort(it.id)}>

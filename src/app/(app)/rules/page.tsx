@@ -10,7 +10,7 @@ export default function RulesPage() {
   const issuers = Object.values(legalLines);
   return (
     <main className="prose">
-      <h1>How the numbers are made</h1>
+      <h1 className="head">How the numbers are made</h1>
       <p className="muted">Every formula on a label is here. The fee and any referral never move a row.</p>
 
       <h2>Units</h2>

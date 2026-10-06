@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { VersionedTransaction } from "@solana/web3.js";
 import { companyById, wrappersForCompany } from "@/lib/registry";
@@ -213,17 +213,17 @@ export default function LabelPage({
   const noPool = data?.row.noLiquidity === true;
 
   const line1: React.ReactNode = !data ? (
-    <>For {fmtUsd(size, 0)} USDC you get {dash} {w.symbol}</>
+    <>{dash} {w.symbol} for {fmtUsd(size, 0)} USDC</>
   ) : noPool ? (
     <>No on-chain pool for {w.symbol}</>
   ) : side === "buy" ? (
     <>
-      For {fmtUsd(data.size, 0)} USDC you get {data.row.expectedUnits != null ? <span className="amt fade" key={data.buy?.quotedAt ?? data.generatedAt}>{fmtUnits(data.row.expectedUnits)}</span> : dash} {w.symbol}
+      {data.row.expectedUnits != null ? <span className="amt fade" key={data.buy?.quotedAt ?? data.generatedAt}>{fmtUnits(data.row.expectedUnits)}</span> : dash} {w.symbol} for {fmtUsd(data.size, 0)} USDC
     </>
   ) : (
     <>
-      For {data.row.expectedUnits != null ? fmtUnits(data.row.expectedUnits) : dash} {w.symbol} you get{" "}
-      {data.row.roundTripUsdc != null ? <span className="amt fade" key={data.generatedAt}>{fmtUsd(data.size + data.row.roundTripUsdc)}</span> : dash} USDC
+      {data.row.roundTripUsdc != null ? <span className="amt fade" key={data.generatedAt}>{fmtUsd(data.size + data.row.roundTripUsdc)}</span> : dash} USDC for{" "}
+      {data.row.expectedUnits != null ? fmtUnits(data.row.expectedUnits) : dash} {w.symbol}
     </>
   );
   const line2: React.ReactNode = !data ? (
@@ -231,7 +231,7 @@ export default function LabelPage({
   ) : data.row.premium == null ? (
     data.reference ? (
       <>
-        Reference {fmtUsd(data.reference.price)} USD{" "}
+        {fmtUsd(data.reference.price)} USD{" "}
         <span className="small muted">
           {data.reference.source}, {fmtAge(data.reference.ageSec)}
           {data.reference.stale ? ", from cache" : ""}
@@ -248,7 +248,7 @@ export default function LabelPage({
   );
   const roundTripPct = data?.row.roundTripPct ?? null;
   const line3: React.ReactNode = (
-    <>Round trip about {roundTripPct != null ? `${(Math.abs(roundTripPct) * 100).toFixed(1)}%` : dash} if sold straight back</>
+    <>about {roundTripPct != null ? `${(Math.abs(roundTripPct) * 100).toFixed(1)}%` : dash} if sold straight back</>
   );
   const left: { k: string; v: React.ReactNode }[] = [
     {
@@ -351,9 +351,18 @@ export default function LabelPage({
 
       {err ? <p className="warn">{err}</p> : null}
 
-      <p className="sum">{line1}</p>
-      <p className="sum">{line2}</p>
-      {noPool ? null : <p className="sum">{line3}</p>}
+      <dl className="sum">
+        <dt>You get</dt>
+        <dd>{line1}</dd>
+        <dt>{data && data.row.premium != null ? "Premium" : "Reference"}</dt>
+        <dd>{line2}</dd>
+        {noPool ? null : (
+          <>
+            <dt>Round trip</dt>
+            <dd>{line3}</dd>
+          </>
+        )}
+      </dl>
 
       <div className="controls">
         <button onClick={buildAndSign} disabled={!connected || !data || data.row.noLiquidity}>Build swap, sign in wallet</button>
@@ -377,28 +386,14 @@ export default function LabelPage({
         <summary>Details</summary>
         <p className="small">{data?.legal.line ?? ""}</p>
 
-        <div className="cols" aria-busy={loading}>
-        <table className="kv">
-          <tbody>
-            {left.map((r) => (
-              <tr key={r.k}>
-                <td className="k">{r.k}</td>
-                <td className="v">{r.v}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <table className="kv">
-          <tbody>
-            {right.map((r) => (
-              <tr key={r.k}>
-                <td className="k">{r.k}</td>
-                <td className="v">{r.v}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+        <dl className="label" aria-busy={loading}>
+          {[...left, ...right].map((r) => (
+            <Fragment key={r.k}>
+              <dt>{r.k}</dt>
+              <dd>{r.v}</dd>
+            </Fragment>
+          ))}
+        </dl>
         <p className="small muted">{data ? `Reference ${data.reference ? fmtAge(data.reference.ageSec) : "n/a"}, quote ${fmtAge(quoteAge)}, simulated.` : " "}</p>
 
       <p className="small muted">

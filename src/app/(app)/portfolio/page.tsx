@@ -95,57 +95,43 @@ export default function PortfolioPage({ searchParams }: { searchParams: Promise<
         const company = h.wrapper ? companyById.get(h.wrapper.companyId) : undefined;
         return (
           <section key={h.mint} style={{ marginTop: 28 }}>
-            <h2 style={{ marginTop: 0 }}>
-              <span className="mono">{sym}</span> <span className="muted" style={{ fontWeight: 400, fontSize: 14 }}>{issuerName[iss] ?? iss}{company ? <> · <Link href={`/c/${company.id}`}>{company.name}</Link></> : null}</span>
+            <h2 className="pos">
+              <span className="mono">{sym}</span><span className="muted">{issuerName[iss] ?? iss}{company ? <> · <Link href={`/c/${company.id}`}>{company.name}</Link></> : null}</span>
             </h2>
-            <table className="kv">
-              <tbody>
-                <tr>
-                  <td className="k">Balance</td>
-                  <td className="v">{fmtUnits(h.balanceUnits, 6)} {sym}<span className="detail">{h.balanceRaw} raw × {h.state.multiplier.toFixed(7)}</span></td>
-                </tr>
-                {h.wrapper ? (
-                  <>
-                    <tr>
-                      <td className="k">Value</td>
-                      <td className="v">
-                        {!panel ? <button className="secondary" onClick={() => loadPanel(h)}>Quote this position</button> : panel === "loading" ? "quoting…" : (
-                          <>
-                            {panel.sellUsdc != null ? <><span className="amt">{fmtUsd(panel.sellUsdc)}</span> USDC if sold now</> : "no route at this size"}
-                            {panel.reference ? <span className="detail">at the reference ({panel.reference.source}, {fmtAge(panel.reference.ageSec)}): {fmtUsd(h.balanceUnits * panel.reference.price)} USD{panel.premium != null ? `; pool ${fmtPct(panel.premium)} to reference` : ""}</span> : null}
-                          </>
-                        )}
-                      </td>
-                    </tr>
-                    {isPrivate && panel && panel !== "loading" ? (
+            <dl className="label">
+              <dt>Balance</dt>
+              <dd>{fmtUnits(h.balanceUnits, 6)} {sym}<span className="detail">{h.balanceRaw} raw × {h.state.multiplier.toFixed(7)}</span></dd>
+              {h.wrapper ? (
+                <>
+                  <dt>Value</dt>
+                  <dd>
+                    {!panel ? <button className="secondary" onClick={() => loadPanel(h)}>Quote this position</button> : panel === "loading" ? "quoting…" : (
                       <>
-                        <tr>
-                          <td className="k">Mark value</td>
-                          <td className="v">{panel.reference ? `${fmtUsd(h.balanceUnits * panel.reference.price)} USD at the issuer's mark (not a payout)` : "no mark"}<span className="detail">Issuer commitment: {panel.legalRedemption}</span>{panel.belowMark ? <span className="detail warn">Pool is under the mark; no redemption at the mark is enforceable.</span> : panel.premium != null && panel.premium > 0 ? <span className="detail">Pool pays {fmtPct(panel.premium)} above mark today.</span> : null}</td>
-                        </tr>
-                        <tr>
-                          <td className="k">Sell now</td>
-                          <td className="v">{panel.sellUsdc != null ? `${fmtUsd(panel.sellUsdc)} USDC after fees` : "no route"}<span className="detail"><Link href={`/c/${h.wrapper.companyId}/${encodeURIComponent(h.wrapper.symbol)}`}>Build the sell on the label</Link></span></td>
-                        </tr>
+                        {panel.sellUsdc != null ? <><span className="amt">{fmtUsd(panel.sellUsdc)}</span> USDC if sold now</> : "no route at this size"}
+                        {panel.reference ? <span className="detail">at the reference ({panel.reference.source}, {fmtAge(panel.reference.ageSec)}): {fmtUsd(h.balanceUnits * panel.reference.price)} USD{panel.premium != null ? `; pool ${fmtPct(panel.premium)} to reference` : ""}</span> : null}
                       </>
-                    ) : null}
-                  </>
-                ) : (
-                  <tr>
-                    <td className="k">Label</td>
-                    <td className="v small" style={{ fontFamily: "var(--sans)" }}>Recognised by on-chain metadata as a {issuerName[iss] ?? iss} wrapper not in the seed list; the issuer line applies, the quote does not.</td>
-                  </tr>
-                )}
-                <tr>
-                  <td className="k">Powers</td>
-                  <td className="v">{h.powers}</td>
-                </tr>
-                <tr>
-                  <td className="k">Next event</td>
-                  <td className="v">{h.nextEvent ? <>{h.nextEvent.text}{h.nextEvent.sourceUrl ? <span className="detail"><a href={h.nextEvent.sourceUrl} target="_blank" rel="noreferrer">source</a></span> : null}</> : "none announced"}</td>
-                </tr>
-              </tbody>
-            </table>
+                    )}
+                  </dd>
+                  {isPrivate && panel && panel !== "loading" ? (
+                    <>
+                      <dt>Mark value</dt>
+                      <dd>{panel.reference ? `${fmtUsd(h.balanceUnits * panel.reference.price)} USD at the issuer's mark (not a payout)` : "no mark"}<span className="detail">Issuer commitment: {panel.legalRedemption}</span>{panel.belowMark ? <span className="detail warn">Pool is under the mark; no redemption at the mark is enforceable.</span> : panel.premium != null && panel.premium > 0 ? <span className="detail">Pool pays {fmtPct(panel.premium)} above mark today.</span> : null}</dd>
+                      <dt>Sell now</dt>
+                      <dd>{panel.sellUsdc != null ? `${fmtUsd(panel.sellUsdc)} USDC after fees` : "no route"}<span className="detail"><Link href={`/c/${h.wrapper.companyId}/${encodeURIComponent(h.wrapper.symbol)}`}>Build the sell on the label</Link></span></dd>
+                    </>
+                  ) : null}
+                </>
+              ) : (
+                <>
+                  <dt>Label</dt>
+                  <dd className="small" style={{ fontFamily: "var(--sans)" }}>Recognised by on-chain metadata as a {issuerName[iss] ?? iss} wrapper not in the seed list; the issuer line applies, the quote does not.</dd>
+                </>
+              )}
+              <dt>Powers</dt>
+              <dd>{h.powers}</dd>
+              <dt>Next event</dt>
+              <dd>{h.nextEvent ? <>{h.nextEvent.text}{h.nextEvent.sourceUrl ? <span className="detail"><a href={h.nextEvent.sourceUrl} target="_blank" rel="noreferrer">source</a></span> : null}</> : "none announced"}</dd>
+            </dl>
           </section>
         );
       })}

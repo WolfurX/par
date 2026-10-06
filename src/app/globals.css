@@ -28,6 +28,7 @@ a { color: var(--accent); text-decoration: none; border-bottom: 1px solid var(--
 a:hover { border-bottom-color: var(--accent); }
 a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 code, .mono { font-family: var(--mono); font-size: 0.92em; }
+:where(.page) .mono { font-size: inherit; }
 
 .page { max-width: 940px; margin: 0 auto; padding: 28px 20px 80px; }
 .page p { max-width: 74ch; }
@@ -49,6 +50,11 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; }
 .statusbar-in .pow { margin-left: auto; }
 h1 { font-family: var(--font-archivo), var(--sans); font-size: 26px; font-weight: 700; line-height: 1.15; margin: 0 0 10px; letter-spacing: -0.01em; text-wrap: balance; }
 h1 .mono { font-weight: 500; }
+.head { margin: 0 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--rule-strong); }
+.head h1 { margin: 0; }
+.head .tick { font-family: var(--mono); font-size: 14px; font-weight: 400; color: var(--muted); margin-left: 10px; }
+.head .range { margin: 4px 0 0; }
+.head + .label { margin-top: 0; border-top: 0; }
 h2 { font-size: 18px; font-weight: 600; margin: 32px 0 10px; }
 h3 { font-size: 14px; font-weight: 600; margin: 22px 0 6px; letter-spacing: 0.01em; }
 p { margin: 0 0 12px; }
@@ -65,20 +71,22 @@ td.num, th.num { text-align: right; padding-right: 0; }
 .tbl { overflow-x: auto; }
 .tbl.more { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); }
 
-.strip { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; border: 1px solid var(--rule-strong); padding: 10px; margin: 12px 0 16px; }
-.cols { display: grid; grid-template-columns: 1fr; gap: 18px; align-items: start; margin: 12px 0 6px; }
-table.kv { margin: 0; font-size: 13.5px; }
-table.kv td { border: 1px solid var(--rule); padding: 7px 9px; vertical-align: top; }
-table.kv td.k { width: 38%; font-size: 12.5px; color: var(--muted); background: var(--ground2); }
-table.kv td.v { font-family: var(--mono); font-size: 13.5px; }
-table.kv td.v .detail { display: block; font-family: var(--sans); font-size: 13px; color: var(--muted); margin-top: 2px; }
-@media (min-width: 900px) { .cols { grid-template-columns: 1fr 1fr; } }
+.strip { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; padding: 6px 0; margin: 12px 0 10px; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule); }
+@media (min-width: 641px) { .strip { padding: 0; } .strip input, .strip > button { height: 36px; } .strip .seg button { height: 34px; } }
 
-/* Label: a definition list with hairlines, monospace values */
-.label { display: grid; grid-template-columns: 11ch 1fr; gap: 0; margin: 12px 0 18px; border-top: 1px solid var(--rule-strong); }
-.label > dt { color: var(--muted); font-size: 13px; padding: 8px 8px 8px 0; border-bottom: 1px solid var(--rule); }
-.label > dd { margin: 0; padding: 8px 0; border-bottom: 1px solid var(--rule); font-family: var(--mono); font-size: 13.5px; line-height: 1.5; }
-.label > dd .detail { display: block; font-family: var(--sans); font-size: 13px; color: var(--muted); }
+/* Readout: a definition list with hairlines, 28 px rows, monospace values */
+.label { display: grid; grid-template-columns: 11ch minmax(0, 1fr); gap: 0; margin: 12px 0 18px; border-top: 1px solid var(--rule-strong); }
+.label.refs { grid-template-columns: fit-content(45%) minmax(0, 1fr); }
+.label > dt, .label > dd { min-height: 28px; padding: 6px 0; line-height: 15px; border-bottom: 1px solid var(--rule); }
+.label > dt { color: var(--muted); font-size: 12px; padding-right: 8px; }
+.label > dd { margin: 0; font-family: var(--mono); font-size: 13px; overflow-wrap: anywhere; }
+.label > dd .detail { display: block; font-family: var(--sans); font-size: 12px; color: var(--muted); }
+.label > .trail { grid-column: 1 / -1; }
+.label .pyth-mark { line-height: 1; }
+.pos { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 10px; margin: 0; min-height: 32px; line-height: 31px; font-size: 15px; font-weight: 500; }
+.pos .muted { font-size: 13px; font-weight: 400; }
+.pos a { color: var(--muted); }
+.pos + .label { margin-top: 0; }
 
 .row-list { border-top: 1px solid var(--rule-strong); }
 .row { display: grid; grid-template-columns: 3ch minmax(0, 1fr) auto auto auto; grid-auto-flow: row dense; gap: 0 10px; align-items: center; padding: 4px 10px; border-bottom: 1px solid var(--rule); }
@@ -124,9 +132,8 @@ footer.site-footer { margin-top: 56px; padding-top: 14px; border-top: 1px solid 
 footer.site-footer p { margin: 0 0 8px; }
 
 @media (max-width: 480px) {
-  .label { grid-template-columns: 9ch 1fr; }
   .page { padding: 20px 14px 64px; }
-  .prose td { overflow-wrap: anywhere; }
+  .prose td, .prose .mono { overflow-wrap: anywhere; }
   .titlebar-in { padding: 0 14px; gap: 10px; }
   .cmd input { font-size: 16px; }
   .statusbar-in { padding: 0 14px; font-size: 11.5px; line-height: 22px; min-height: 22px; }
@@ -163,22 +170,30 @@ footer.site-footer p { margin: 0 0 8px; }
 .chart-data summary { color: var(--muted); cursor: pointer; }
 
 .matrix { border-collapse: separate; border-spacing: 0; border-top: 1px solid var(--rule); border-left: 1px solid var(--rule); min-width: 100%; margin: 8px 0 10px; }
-.matrix th, .matrix td { border-bottom: 1px solid var(--rule); border-right: 1px solid var(--rule); padding: 8px 10px; text-align: left; vertical-align: top; }
-.matrix th.rowlab { position: sticky; left: 0; z-index: 1; width: 112px; background: var(--ground); border-right: 1px solid var(--rule-strong); color: var(--muted); font-size: 12.5px; font-weight: 400; }
-.matrix td { min-width: 180px; font-family: var(--mono); font-size: 13.5px; }
+.matrix th, .matrix td { border-bottom: 1px solid var(--rule); border-right: 1px solid var(--rule); padding: 6px 8px; text-align: left; vertical-align: top; }
+.matrix th.rowlab { position: sticky; left: 0; z-index: 1; width: 10ch; min-width: 10ch; box-sizing: content-box; background: var(--ground); border-right: 1px solid var(--rule-strong); color: var(--muted); font-size: 12.5px; font-weight: 400; }
+.matrix td { min-width: 180px; font-family: var(--mono); font-size: 13px; }
 .matrix tbody tr:nth-child(even) th.rowlab, .matrix tbody tr:nth-child(even) td { background: #f2f0ea; }
 .matrix tr:last-child th.rowlab { border-bottom: 1px solid var(--rule-strong); }
-.matrix .detail { display: block; font-family: var(--sans); font-size: 13px; color: var(--muted); margin-top: 2px; }
+.matrix .detail { display: block; font-family: var(--sans); font-size: 12px; color: var(--muted); margin-top: 2px; }
 .matrix .text { font-family: var(--sans); font-size: 13px; }
 .matrix .sym { font-family: var(--mono); font-size: 15px; }
 .matrix .win { color: var(--accent); }
 .matrix .btn { display: inline-flex; align-items: center; min-height: 44px; }
+@media (min-width: 641px) { .matrix .btn { min-height: 36px; padding-top: 0; padding-bottom: 0; } }
 
-.sum { font-size: 19px; line-height: 1.45; margin: 0 0 8px; }
+.sum { display: grid; grid-template-columns: 11ch minmax(0, 1fr); gap: 0; margin: 0 0 12px; border-top: 1px solid var(--rule-strong); }
+.sum > dt, .sum > dd { min-height: 32px; padding: 5px 0; line-height: 21px; border-bottom: 1px solid var(--rule); }
+.sum > dt { color: var(--muted); font-size: 13px; padding-right: 8px; }
+.sum > dd { margin: 0; font-size: 13px; overflow-wrap: anywhere; }
 .amt { color: var(--accent); }
-.sum .amt { font-family: var(--font-archivo), var(--sans); font-weight: 700; }
+.sum .amt { font-family: var(--font-archivo), var(--sans); font-weight: 700; font-size: 20px; line-height: 14px; }
 .details { border-top: 1px solid var(--rule); margin: 14px 0 0; }
-.details > summary { color: var(--muted); cursor: pointer; padding: 10px 0; min-height: 44px; }
+.details > summary { list-style: none; display: flex; align-items: center; gap: 0 1ch; min-height: 44px; padding: 0; color: var(--muted); cursor: pointer; }
+.details > summary::-webkit-details-marker { display: none; }
+.details > summary::before { content: "+"; color: var(--ink); }
+.details[open] > summary::before { content: "-"; }
+@media (min-width: 641px) { .details > summary { min-height: 36px; } }
 .details > summary + p { font-family: var(--sans); }
 
 .spark { display: block; width: 100%; height: 28px; display: block; }

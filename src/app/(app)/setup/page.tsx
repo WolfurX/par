@@ -44,7 +44,7 @@ export default function SetupPage() {
 
   return (
     <main>
-      <h1>Setup</h1>
+      <h1 className="head">Setup</h1>
       <p className="muted">Operator page. Creates Parsec&apos;s Tessera referral code from the fee wallet; costs about 0.0023 SOL of rent. The connected wallet must be the fee wallet.</p>
       <div className="controls">
         <WalletMultiButton />
