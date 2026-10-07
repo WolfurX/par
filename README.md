@@ -9,7 +9,10 @@ Built for the Stocklana hackathon (Solana Foundation, September 2026).
 - Company page: every wrapper of a company (xStocks, Ondo, Backpack .US, Tessera, PreStocks) side by side at your size, sorted by Price, Liquidity, Redeemable or Terms, each with a one-line "what you own".
 - Buy screen: at your size, the reference price and its source, pool price, premium in percent and in dollars, US session state, price impact, expected and minimum receive (the quote checked by a server-side simulation), fees in and out, round trip, what jup.ag would deliver, then a Jupiter Swap API transaction you sign in your wallet.
 - Portfolio: connect or paste a wallet; every wrapper position explained from live mint state (balance as the wallet shows it, issuer powers, transfer fee, next dated event), with a sell-now vs mark-value panel for pre-IPO tokens.
+- Command line in the title bar: `openai 1000`, `aapl 5k liq`, `tOpenAI 500` (a wrapper symbol with a size opens its buy screen); `/` focuses it.
 - Rules, fee ledger and sources are public pages.
+
+Coverage as of 2026-10-06: 43 companies and 60 wrappers across xStocks, Ondo, Backpack Securities, Tessera and PreStocks, every mint pinned by address and read on-chain; wrappers with no market are kept for portfolio reads but not listed.
 
 ## Money, stated plainly
 
