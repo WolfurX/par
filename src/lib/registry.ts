@@ -50,6 +50,15 @@ export const companies: Company[] = [
   { id: "lmt", name: "Lockheed Martin", ticker: "LMT", kind: "public", pythEquityFeedId: "880d96a272d5ccbb3cd6f6aacb881a996cb4976b3f252b58c595cd2a418b6ea9" },
   { id: "baba", name: "Alibaba", ticker: "BABA", kind: "public", pythEquityFeedId: "72bc23b1d0afb1f8edef20b7fb60982298993161bc0fd749587d6f60cd1ee9a3" },
   { id: "ttwo", name: "Take-Two Interactive", ticker: "TTWO", kind: "public", pythEquityFeedId: "782a6a261306f01ab2ad004062a2832107360eefdcf8c83223e0ff7ca7ebde8d" },
+  // Added 2026-10-22 (Backpack .US rows with a USDC or SOL pool over 100K USD that day); feed ids from Hermes v2 price_feeds.
+  { id: "hims", name: "Hims & Hers Health", ticker: "HIMS", kind: "public", pythEquityFeedId: "2132cbc333161e94b91da745ed73b1450410fdc870f2235bf628c28da358b652" },
+  { id: "nflx", name: "Netflix", ticker: "NFLX", kind: "public", pythEquityFeedId: "8376cfd7ca8bcdf372ced05307b24dced1f15b1afafdeff715664598f15a3dd2" },
+  { id: "cyph", name: "Cypherpunk Technologies", ticker: "CYPH", kind: "public", pythEquityFeedId: "a90a08193b3fed118acb31ec62f6a929862057df06a50259fd0c4643bc81ef62" },
+  { id: "race", name: "Ferrari", ticker: "RACE", kind: "public" }, // no Pyth equity feed (Hermes query empty, 2026-10-22)
+  { id: "amd", name: "Advanced Micro Devices", ticker: "AMD", kind: "public", pythEquityFeedId: "3622e381dbca2efd1859253763b1adc63f7f9abb8e76da1aa8e638a57ccde93e" },
+  { id: "dkng", name: "DraftKings", ticker: "DKNG", kind: "public", pythEquityFeedId: "c0713033a43355d99ca9bb3d77aaba2341efaded3a9518f201331a3f0c1c374c" },
+  { id: "rddt", name: "Reddit", ticker: "RDDT", kind: "public", pythEquityFeedId: "c0ece6b9254797f4384bda1ba3f2c33259f552c7849a86b3029e811be5ea9227" },
+  { id: "rblx", name: "Roblox", ticker: "RBLX", kind: "public", pythEquityFeedId: "d62134a195739141d0649991f11fe0f9cd9eb83fd890bc3ba41dfdd18c1a49f4" },
   { id: "openai", name: "OpenAI", kind: "private", pythIndexProId: 3619 },
   { id: "kalshi", name: "Kalshi", kind: "private" },
   { id: "anthropic", name: "Anthropic", kind: "private", pythIndexProId: 3618 }, // coming_soon on 2026-09-16
@@ -57,6 +66,7 @@ export const companies: Company[] = [
   { id: "figure", name: "Figure AI", kind: "private" },
   { id: "neuralink", name: "Neuralink", kind: "private" },
   { id: "anduril", name: "Anduril", kind: "private" },
+  { id: "oura", name: "Oura", kind: "private" }, // PreStocks listing found 2026-10-22
 ];
 
 export const wrappers: Wrapper[] = [
@@ -65,7 +75,7 @@ export const wrappers: Wrapper[] = [
   { mint: "XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB", issuer: "xstocks", symbol: "TSLAx", name: "Tesla xStock", decimals: 8, companyId: "tsla", reference: { kind: "pyth-core", feedId: "16dad506d7db8da01c87581c87ca897a012a153557d4d578c3b9c9e1bc0632f1" }, pythWrapperProId: 1847, pythRedemptionRateProId: 1846 },
   { mint: "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh", issuer: "xstocks", symbol: "NVDAx", name: "Nvidia xStock", decimals: 8, companyId: "nvda", reference: { kind: "pyth-core", feedId: "b1073854ed24cbc755dc527418f52b7d271f6cc967bbf8d8129112b18860a593" }, pythWrapperProId: 1833, pythRedemptionRateProId: 1832 },
   { mint: "XsoCS1TfEyfFhfvj8EtZ528L3CaKBDBRqRapnBbDF2W", issuer: "xstocks", symbol: "SPYx", name: "SP500 xStock", decimals: 8, companyId: "spy", reference: { kind: "pyth-core", feedId: "19e09bb805456ada3979a7d1cbb4b6d63babc3a0f8e8a9509f68afa5c4c11cd5" }, pythWrapperProId: 1843, pythRedemptionRateProId: 1842 },
-  { mint: "XsQLZycSZ7QnBBdBXQaTbQdiUcbRqjNJgyBGAMzhHav", issuer: "xstocks", symbol: "MUx", name: "Micron Technology xStock", decimals: 8, companyId: "mu", reference: { kind: "pyth-core", feedId: "152244dc24665ca7dd3f257b8f442dc449b6346f48235b7b229268cb770dda2d" } }, // mint from api.xstocks.fi, verified on-chain 2026-09-19
+  { mint: "XsQLZycSZ7QnBBdBXQaTbQdiUcbRqjNJgyBGAMzhHav", issuer: "xstocks", symbol: "MUx", name: "Micron Technology xStock", decimals: 8, companyId: "mu", reference: { kind: "pyth-core", feedId: "152244dc24665ca7dd3f257b8f442dc449b6346f48235b7b229268cb770dda2d" }, market: "none" }, // mint from api.xstocks.fi, verified on-chain 2026-09-19; no market: 160 USD in its only pool on 2026-10-22 (MU.US carries Micron)
   { mint: "Xs3oZwbHvqis4NYcf4YKWmEia2eC84wSiVrcYcTqpH8", issuer: "xstocks", symbol: "SPCXx", name: "SpaceX xStock", decimals: 8, companyId: "spcx", reference: { kind: "xstocks-price-data", symbol: "SPCXx" } }, // mint from api.xstocks.fi, verified on-chain 2026-09-19; no Pyth Core account for SPCX
   // Added 2026-10-06, each mint read on-chain that day; backpack-external where the equity feed has no Core account on shard 1.
   { mint: "XsueG8BtpquVJX9LVLLEGuViXUungE6WmK5YZ3p3bd1", issuer: "xstocks", symbol: "CRCLx", name: "Circle xStock", decimals: 8, companyId: "crcl", reference: { kind: "backpack-external", symbol: "CRCL.US_USDC" } },
@@ -96,7 +106,7 @@ export const wrappers: Wrapper[] = [
   { mint: "SPCXxcqXj6e5dJDVNovHN8744zkbhM2bYudU45BimGb", issuer: "backpack", symbol: "SPCX.US", name: "SpaceX - Backpack Securities", decimals: 6, companyId: "spcx", reference: { kind: "backpack-external", symbol: "SPCX.US_USDC" }, pythWrapperProId: 3329, pythRedemptionRateProId: 3328 },
   { mint: "MUxEsUKSMACyw5fZf68wxf5FLnZVhtU9CwH8uNNGay1", issuer: "backpack", symbol: "MU.US", name: "Micron Technology, Inc. - Backpack Securities", decimals: 6, companyId: "mu", reference: { kind: "pyth-core", feedId: "152244dc24665ca7dd3f257b8f442dc449b6346f48235b7b229268cb770dda2d" } },
   { mint: "AAPLEDt8RpzPgXyhvFzkMBofvFSQw9gpeMCoUdPdLnB8", issuer: "backpack", symbol: "AAPL.US", name: "Apple Inc. - Backpack Securities", decimals: 6, companyId: "aapl", reference: { kind: "pyth-core", feedId: "49f6b65cb1de6b10eaf75e7c03ca029c306d0357e91b5311b175084a5ad55688" }, market: "none" }, // no market: deposits disabled at Backpack, no DEX pool (2026-10-06)
-  { mint: "TSLAqBbv4CNCnzWFeB7LmydAyEiNMJtve7DYKLpdK4S", issuer: "backpack", symbol: "TSLA.US", name: "Tesla, Inc. - Backpack Securities", decimals: 6, companyId: "tsla", reference: { kind: "pyth-core", feedId: "16dad506d7db8da01c87581c87ca897a012a153557d4d578c3b9c9e1bc0632f1" }, market: "none" }, // no market: deposits disabled at Backpack, no DEX pool (2026-10-06)
+  { mint: "TSLAqBbv4CNCnzWFeB7LmydAyEiNMJtve7DYKLpdK4S", issuer: "backpack", symbol: "TSLA.US", name: "Tesla, Inc. - Backpack Securities", decimals: 6, companyId: "tsla", reference: { kind: "pyth-core", feedId: "16dad506d7db8da01c87581c87ca897a012a153557d4d578c3b9c9e1bc0632f1" } }, // no market on 2026-10-06; deposits re-enabled and an Orca USDC pool of about 906K USD on 2026-10-22, so listed again
   { mint: "NVDAVuiB7hwd3m5Wa1JuHNovPaPG6BH1QNztbKFxNjv", issuer: "backpack", symbol: "NVDA.US", name: "NVIDIA Corporation - Backpack Securities", decimals: 6, companyId: "nvda", reference: { kind: "pyth-core", feedId: "b1073854ed24cbc755dc527418f52b7d271f6cc967bbf8d8129112b18860a593" }, market: "none" }, // no market: deposits disabled at Backpack, no DEX pool (2026-10-06)
   { mint: "SPYBo66VJPFjh1pXMb9Le53kDYWTK1zzYVDeVRWtsbi", issuer: "backpack", symbol: "SPY.US", name: "State Street SPDR S&P 500 ETF Trust - Backpack Securities", decimals: 6, companyId: "spy", reference: { kind: "pyth-core", feedId: "19e09bb805456ada3979a7d1cbb4b6d63babc3a0f8e8a9509f68afa5c4c11cd5" }, market: "none" }, // mint from api.backpack.exchange/api/v1/assets, verified on-chain 2026-09-19; deposit/withdraw disabled; no market, no DEX pool on 2026-10-06
   { mint: "FWDtiB5fXHdVAewPqvHPL2dh4aBC1C6GacQbePoQXKjz", issuer: "backpack", symbol: "FWDI.US", name: "Forward Industries, Inc. - Backpack Securities", decimals: 6, companyId: "fwdi", reference: { kind: "backpack-external", symbol: "FWDI.US_USDC" } }, // mint from api.backpack.exchange/api/v1/assets, verified on-chain 2026-09-23; no Pyth Core account on shard 1 (shard 0 last published 2026-07-22)
@@ -116,13 +126,23 @@ export const wrappers: Wrapper[] = [
   { mint: "LMT3i1BHgixFqPUgcyteJhnEz2dpy9i3cYy4pi9BoeV", issuer: "backpack", symbol: "LMT.US", name: "Lockheed Martin - Backpack Securities", decimals: 6, companyId: "lmt", reference: { kind: "backpack-external", symbol: "LMT.US_USDC" } },
   { mint: "BABANGA4JE7Kkam4nTrALAwAVgsNJUuFJnnkF7S16BZp", issuer: "backpack", symbol: "BABA.US", name: "Alibaba Group Holding - Backpack Securities", decimals: 6, companyId: "baba", reference: { kind: "backpack-external", symbol: "BABA.US_USDC" } },
   { mint: "TTWofwAge91oFhZs7kpQdyrVRkmevgM88xijGvQFbKo", issuer: "backpack", symbol: "TTWO.US", name: "Take-Two Interactive Software - Backpack Securities", decimals: 6, companyId: "ttwo", reference: { kind: "backpack-external", symbol: "TTWO.US_USDC" } },
+  // Added 2026-10-22, each mint read on-chain that day (Token-2022, 6 decimals, freeze authority 2cVYpag...af4a, scaled UI multiplier 1); pyth-core only where the shard-1 Core account exists (META, AMD).
+  { mint: "METAaH6MMZZgy2CTEJq3QdNi7AFVTV3NxHFBfFgLEDd", issuer: "backpack", symbol: "META.US", name: "Meta Platforms - Backpack Securities", decimals: 6, companyId: "meta", reference: { kind: "pyth-core", feedId: "78a3e3b8e676a8f73c439f5d749737034b139bbbe899ba5775216fba596607fe" } },
+  { mint: "HiMSSzzwkZkrXJ4PGVJRdtfLaANeAztjjcgk5Dxe7Lwx", issuer: "backpack", symbol: "HIMS.US", name: "Hims & Hers Health - Backpack Securities", decimals: 6, companyId: "hims", reference: { kind: "backpack-external", symbol: "HIMS.US_USDC" } },
+  { mint: "NFLX7qV57zuVxCoHy3s1jiGZyALraLNwttbxdvmYJLJ", issuer: "backpack", symbol: "NFLX.US", name: "Netflix - Backpack Securities", decimals: 6, companyId: "nflx", reference: { kind: "backpack-external", symbol: "NFLX.US_USDC" } },
+  { mint: "CYPHuMmCL1GxJWa2tsPhLKykC7GrHJTCHwbXD4g5uawK", issuer: "backpack", symbol: "CYPH.US", name: "Cypherpunk Technologies - Backpack Securities", decimals: 6, companyId: "cyph", reference: { kind: "backpack-external", symbol: "CYPH.US_USDC" } },
+  { mint: "RACEyWiM2ztEZcJx2AHXU2eWjhxU57x3vXn92b39dLD", issuer: "backpack", symbol: "RACE.US", name: "Ferrari - Backpack Securities", decimals: 6, companyId: "race", reference: { kind: "backpack-external", symbol: "RACE.US_USDC" } },
+  { mint: "AMD8XwJXgQ9WV45Wyj9yFLejxzf2J6VM1PJY8bJEjeES", issuer: "backpack", symbol: "AMD.US", name: "Advanced Micro Devices - Backpack Securities", decimals: 6, companyId: "amd", reference: { kind: "pyth-core", feedId: "3622e381dbca2efd1859253763b1adc63f7f9abb8e76da1aa8e638a57ccde93e" } },
+  { mint: "DKNGQFNGQmoBdXSRGKJ8tTu7uPDasw5JDcfMmWniNfow", issuer: "backpack", symbol: "DKNG.US", name: "DraftKings - Backpack Securities", decimals: 6, companyId: "dkng", reference: { kind: "backpack-external", symbol: "DKNG.US_USDC" } },
+  { mint: "RDDTGbhHwVXfyCvQMXzzowKjf5qrYBZAnehoXW83ooh", issuer: "backpack", symbol: "RDDT.US", name: "Reddit - Backpack Securities", decimals: 6, companyId: "rddt", reference: { kind: "backpack-external", symbol: "RDDT.US_USDC" } },
+  { mint: "RBLXDGRD64AtRamHMFVcjqne3Ar7NLWtFtYNtsrf1cE", issuer: "backpack", symbol: "RBLX.US", name: "Roblox - Backpack Securities", decimals: 6, companyId: "rblx", reference: { kind: "backpack-external", symbol: "RBLX.US_USDC" } },
 
   // Tessera T-Tokens: Token-2022, 9 decimals, 20 bps transfer fee, no hook, no delegate
   { mint: "oPAiAikWTaFj9RYoRFD35ccfwhnMcB3ThgBZRHSkjTZ", issuer: "tessera", symbol: "tOpenAI", name: "T-OpenAI", decimals: 9, companyId: "openai", reference: { kind: "tessera", code: "tOpenAI" } },
   { mint: "TKLSidmLVt3cqGaaodG8tyRzoANfQwoh67AccjmubeZ", issuer: "tessera", symbol: "tKalshi", name: "T-Kalshi", decimals: 9, companyId: "kalshi", reference: { kind: "tessera", code: "tKalshi" } },
   { mint: "TSPXcLV76s6V2zDiZQ18kBfcbnjaE2ZzNT3ga2Pd99v", issuer: "tessera", symbol: "tSpaceX", name: "T-SpaceX", decimals: 9, companyId: "spcx", reference: { kind: "tessera", code: "tSpaceX" } },
 
-  // PreStocks: Token-2022, 9 decimals, 100 bps transfer fee (50 until epoch 1039), permanent delegate, pausable, scaled UI amount (OPENAI x1.4861347, SPACEX x5)
+  // PreStocks: Token-2022, 9 decimals, 100 bps transfer fee (50 until epoch 1039), permanent delegate, pausable, scaled UI amount (OPENAI x1.4861347, SPACEX x5, OURA x1)
   { mint: "PreweJYECqtQwBtpxHL171nL2K6umo692gTm7Q3rpgF", issuer: "prestocks", symbol: "OPENAI", name: "OpenAI PreStocks", decimals: 9, companyId: "openai", reference: { kind: "prestocks", symbol: "OPENAI" } },
   { mint: "PreLWGkkeqG1s4HEfFZSy9moCrJ7btsHuUtfcCeoRua", issuer: "prestocks", symbol: "KALSHI", name: "Kalshi PreStocks", decimals: 9, companyId: "kalshi", reference: { kind: "prestocks", symbol: "KALSHI" } },
   { mint: "Pren1FvFX6J3E4kXhJuCiAD5aDmGEb7qJRncwA8Lkhw", issuer: "prestocks", symbol: "ANTHROPIC", name: "Anthropic PreStocks", decimals: 9, companyId: "anthropic", reference: { kind: "prestocks", symbol: "ANTHROPIC" } },
@@ -131,6 +151,7 @@ export const wrappers: Wrapper[] = [
   { mint: "PreZad18qfPtbxNpMtMuAuX2zVpvkEU8DnJx56faCWd", issuer: "prestocks", symbol: "FIGUREAI", name: "Figure AI PreStocks", decimals: 9, companyId: "figure", reference: { kind: "prestocks", symbol: "FIGUREAI" } },
   { mint: "PrekqLJvJ3qVdXmBGDiexvwUTF4rLFDa6HWS4HJbw9S", issuer: "prestocks", symbol: "NEURALINK", name: "Neuralink PreStocks", decimals: 9, companyId: "neuralink", reference: { kind: "prestocks", symbol: "NEURALINK" } },
   { mint: "PresTj4Yc2bAR197Er7wz4UUKSfqt6FryBEdAriBoQB", issuer: "prestocks", symbol: "ANDURIL", name: "Anduril PreStocks", decimals: 9, companyId: "anduril", reference: { kind: "prestocks", symbol: "ANDURIL" } },
+  { mint: "Pre9atBqkocK1QngFy7Q7zvyQictEFpXdLi6bZ2qnYy", issuer: "prestocks", symbol: "OURA", name: "Oura PreStocks", decimals: 9, companyId: "oura", reference: { kind: "prestocks", symbol: "OURA" } }, // mint from prestocks.com/api/prestocks, read on-chain 2026-10-22 (fee 100 bps, multiplier 1); Raydium USDC pool about 118K USD
 ];
 
 export const companyById = new Map(companies.map((c) => [c.id, c]));

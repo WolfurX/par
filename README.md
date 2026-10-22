@@ -12,7 +12,7 @@ Built for the Stocklana hackathon (Solana Foundation, September 2026).
 - Command line in the title bar: `openai 1000`, `aapl 5k liq`, `tOpenAI 500` (a wrapper symbol with a size opens its buy screen); `/` focuses it.
 - Rules, fee ledger and sources are public pages.
 
-Coverage as of 2026-10-06: 43 companies and 60 wrappers across xStocks, Ondo, Backpack Securities, Tessera and PreStocks, every mint pinned by address and read on-chain; wrappers with no market are kept for portfolio reads but not listed.
+Coverage as of 2026-10-22: 52 companies and 70 wrappers across xStocks, Ondo, Backpack Securities, Tessera and PreStocks, every mint pinned by address and read on-chain; wrappers with no market are kept for portfolio reads but not listed.
 
 ## Money, stated plainly
 
